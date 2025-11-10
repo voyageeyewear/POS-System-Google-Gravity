@@ -8,6 +8,7 @@ import CustomerModal from '../components/CustomerModal';
 import { storeAPI, saleAPI, authAPI } from '../utils/api';
 import { Search, ShoppingCart, CreditCard, Receipt, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import frontendCache from '../utils/cache';
 
 export default function POS() {
   const router = useRouter();
@@ -56,17 +57,18 @@ export default function POS() {
       const response = await authAPI.getSyncStatus();
       setSyncStatus(response.data);
       
-      // If sync just completed, reload products
+      // If sync just completed, clear cache and reload products
       if (!response.data.isSyncing && syncStatus?.isSyncing) {
-        console.log('✅ Sync completed, reloading products...');
-        loadProducts();
+        console.log('✅ Sync completed, clearing cache and reloading products...');
+        frontendCache.clear();
+        loadProducts(true); // Force refresh
       }
     } catch (error) {
       console.error('Error checking sync status:', error);
     }
   };
 
-  const loadProducts = async () => {
+  const loadProducts = async (forceRefresh = false) => {
     try {
       setLoadingProducts(true);
       
@@ -81,11 +83,45 @@ export default function POS() {
         console.error('❌ No store ID found for user:', user);
         return;
       }
+
+      const cacheKey = `inventory_store_${storeId}`;
+      
+      // Check frontend cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedProducts = frontendCache.get(cacheKey);
+        if (cachedProducts) {
+          console.log('✅ Using cached products from localStorage');
+          setProducts(cachedProducts);
+          setLoadingProducts(false);
+          
+          // Fetch in background to update cache
+          setTimeout(() => {
+            storeAPI.getInventory(storeId)
+              .then(response => {
+                if (JSON.stringify(response.data.inventory) !== JSON.stringify(cachedProducts)) {
+                  console.log('📦 Products updated in background');
+                  setProducts(response.data.inventory);
+                  frontendCache.set(cacheKey, response.data.inventory, 1800000); // 30 min
+                }
+              })
+              .catch(err => console.error('Background update error:', err));
+          }, 1000);
+          
+          return;
+        }
+      }
       
       console.log('📡 Fetching inventory for store ID:', storeId);
       const response = await storeAPI.getInventory(storeId);
       console.log('✅ Inventory response:', response.data);
-      setProducts(response.data.inventory);
+      
+      const inventory = response.data.inventory;
+      setProducts(inventory);
+      
+      // Cache the products for 30 minutes
+      frontendCache.set(cacheKey, inventory, 1800000);
+      console.log(`💾 Cached ${inventory.length} products for 30 minutes`);
+      
     } catch (error) {
       toast.error('Failed to load products');
       console.error('❌ Error loading products:', error);
@@ -320,15 +356,31 @@ export default function POS() {
         <div className="w-full lg:col-span-2">
           {/* Search and Filters */}
           <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search products..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
+            <div className="flex gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  toast.loading('Refreshing products...');
+                  loadProducts(true).then(() => {
+                    toast.dismiss();
+                    toast.success('Products refreshed!');
+                  });
+                }}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition flex items-center gap-2"
+                title="Refresh products"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-2">

@@ -1,6 +1,7 @@
 const { AppDataSource } = require('../data-source');
 const fs = require('fs');
 const path = require('path');
+const cache = require('../utils/cache');
 
 // Get repositories
 const getStoreRepository = () => AppDataSource.getRepository('Store');
@@ -364,6 +365,10 @@ exports.refreshData = async (req, res) => {
     
     console.log(`✅ Step 3/3 Complete: ${syncResults.inventory.updated} inventory records updated`);
     console.log(`🎉 Full sync completed successfully!`);
+
+    // Clear all inventory cache since data has been refreshed
+    cache.clear();
+    console.log('🗑️  Cleared all inventory cache');
 
     res.json({
       message: 'Full sync completed! Stores, products, and inventory refreshed from Shopify.',

@@ -1,5 +1,6 @@
 const { AppDataSource } = require('../data-source');
 const shopifyService = require('../utils/shopify');
+const cache = require('../utils/cache');
 
 // Get repositories
 const getStoreRepository = () => AppDataSource.getRepository('Store');
@@ -99,23 +100,31 @@ exports.deleteStore = async (req, res) => {
   }
 };
 
-// Get store inventory
+// Get store inventory (with caching)
 exports.getStoreInventory = async (req, res) => {
   try {
     const { storeId } = req.params;
     
     console.log('🔍 getStoreInventory called with storeId:', storeId);
     console.log('🔍 User:', req.user?.email, 'Role:', req.user?.role);
-    console.log('🔍 User assignedStore:', req.user?.assignedStore);
     
     if (!storeId || storeId === 'undefined') {
       return res.status(400).json({ error: 'Invalid store ID provided' });
     }
     
-    const inventoryRepo = getInventoryRepository();
     const storeIdInt = parseInt(storeId);
+    const cacheKey = `inventory:store:${storeIdInt}`;
     
-    console.log('🔍 Fetching inventory for storeId (int):', storeIdInt);
+    // Check cache first
+    const cachedInventory = cache.get(cacheKey);
+    if (cachedInventory) {
+      console.log(`✅ Returning cached inventory for store ${storeIdInt} (${cachedInventory.length} products)`);
+      return res.json({ inventory: cachedInventory, cached: true });
+    }
+    
+    console.log('🔍 Cache miss - Fetching inventory from database for storeId:', storeIdInt);
+    
+    const inventoryRepo = getInventoryRepository();
     
     // Get inventory items for this store with product details
     const inventoryItems = await inventoryRepo.find({
@@ -143,9 +152,12 @@ exports.getStoreInventory = async (req, res) => {
         quantity: inv.quantity
       }));
 
-    console.log(`✅ Store ${storeId}: Returning ${inventoryData.length} products with available stock`);
+    // Cache the inventory for 30 minutes (1800000 ms)
+    cache.set(cacheKey, inventoryData, 1800000);
 
-    res.json({ inventory: inventoryData });
+    console.log(`✅ Store ${storeId}: Returning ${inventoryData.length} products with available stock (cached for 30 min)`);
+
+    res.json({ inventory: inventoryData, cached: false });
   } catch (error) {
     console.error('❌ Error in getStoreInventory:', error);
     console.error('❌ Stack:', error.stack);

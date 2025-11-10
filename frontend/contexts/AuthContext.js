@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../utils/api';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import frontendCache from '../utils/cache';
 
 const AuthContext = createContext();
 
@@ -56,6 +57,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    frontendCache.clear(); // Clear all cached data on logout
     setUser(null);
     router.push('/login');
     toast.success('Logged out successfully');
