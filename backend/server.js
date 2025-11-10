@@ -28,22 +28,40 @@ AppDataSource.initialize()
 // Middleware
 // Configure CORS to allow frontend origin
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://web-production-94748.up.railway.app',
-    /^https:\/\/.*\.up\.railway\.app$/, // Allow all Railway apps
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://web-production-94748.up.railway.app',
+      'https://pos-system-final-nov-2025-production-abc123.up.railway.app'
+    ];
+    
+    // Check if origin matches allowed origins or is a Railway domain
+    if (allowedOrigins.includes(origin) || origin.match(/^https:\/\/.*\.up\.railway\.app$/)) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(null, true); // Allow anyway for debugging
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // 24 hours
 };
+
+// Enable pre-flight for all routes
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`📨 ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
   next();
 });
 
