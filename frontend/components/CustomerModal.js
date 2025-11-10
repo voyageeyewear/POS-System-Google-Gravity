@@ -42,7 +42,7 @@ export default function CustomerModal({ isOpen, onClose, onSubmit }) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4" autoComplete="off">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
               Name <span className="text-red-500">*</span>
@@ -86,8 +86,9 @@ export default function CustomerModal({ isOpen, onClose, onSubmit }) {
               onChange={handleChange}
               required
               rows="3"
+              autoComplete="off"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
-              placeholder="Full address"
+              placeholder="Enter customer address"
             />
           </div>
 
