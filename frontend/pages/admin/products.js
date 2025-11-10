@@ -104,19 +104,127 @@ export default function ProductsManagement() {
     );
   }
 
+  // Diagnostic functions
+  const testShopify = async () => {
+    try {
+      toast.loading('Testing Shopify connection...', { duration: 30000 });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/diagnostic/test-shopify`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      toast.dismiss();
+      
+      if (response.ok) {
+        console.log('✅ Shopify Test Results:', data);
+        toast.success(`✅ Shopify Connected! ${data.totalProducts} products, ${data.locations.length} locations`);
+      } else {
+        console.error('❌ Shopify Test Failed:', data);
+        toast.error(`❌ Shopify Error: ${data.error}`);
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('❌ Connection failed: ' + error.message);
+    }
+  };
+  
+  const checkDatabase = async () => {
+    try {
+      toast.loading('Checking database...', { duration: 30000 });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/diagnostic/database-state`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      toast.dismiss();
+      
+      if (response.ok) {
+        console.log('📊 Database State:', data);
+        const missing = data.productsWithoutInventoryItemId;
+        if (missing > 0) {
+          toast.error(`⚠️ ${missing} products missing inventoryItemId! Click "Fix Inventory IDs"`);
+        } else {
+          toast.success(`✅ Database OK! ${data.totalProducts} products ready`);
+        }
+      } else {
+        console.error('❌ Database Check Failed:', data);
+        toast.error(`❌ Error: ${data.error}`);
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('❌ Failed: ' + error.message);
+    }
+  };
+  
+  const fixInventoryIds = async () => {
+    if (!confirm('This will fetch inventory item IDs for all products from Shopify. This may take 5-10 minutes. Continue?')) {
+      return;
+    }
+    
+    try {
+      toast.loading('🔧 Fixing inventory item IDs... This may take 5-10 minutes', { duration: 600000 });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/diagnostic/fix-inventory-item-ids`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      toast.dismiss();
+      
+      if (response.ok) {
+        console.log('✅ Fix Results:', data);
+        toast.success(`✅ Fixed ${data.updated} products! Now click "Sync Inventory"`);
+      } else {
+        console.error('❌ Fix Failed:', data);
+        toast.error(`❌ Error: ${data.error}`);
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('❌ Failed: ' + error.message);
+    }
+  };
+
   return (
     <AdminLayout title="Products">
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <h2 className="text-xl font-bold text-gray-800">Product Inventory</h2>
-          <button
-            onClick={handleSyncInventory}
-            disabled={syncingInventory}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncingInventory ? 'animate-spin' : ''}`} />
-            {syncingInventory ? 'Syncing Inventory...' : 'Sync Inventory from Shopify'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSyncInventory}
+              disabled={syncingInventory}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncingInventory ? 'animate-spin' : ''}`} />
+              {syncingInventory ? 'Syncing Inventory...' : 'Sync Inventory from Shopify'}
+            </button>
+            
+            {/* DIAGNOSTIC BUTTONS */}
+            <button
+              onClick={testShopify}
+              className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm"
+              title="Test Shopify API connection"
+            >
+              🔍 Test Shopify
+            </button>
+            <button
+              onClick={checkDatabase}
+              className="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition text-sm"
+              title="Check database state"
+            >
+              📊 Check DB
+            </button>
+            <button
+              onClick={fixInventoryIds}
+              className="bg-orange-500 text-white px-3 py-2 rounded-lg hover:bg-orange-600 transition text-sm"
+              title="Fix missing inventory item IDs"
+            >
+              🔧 Fix IDs
+            </button>
+          </div>
         </div>
         
         {/* Search and Filters */}

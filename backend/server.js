@@ -10,6 +10,7 @@ const productRoutes = require('./routes/products');
 const saleRoutes = require('./routes/sales');
 const inventoryRoutes = require('./routes/inventory');
 const dataManagementRoutes = require('./routes/dataManagement');
+const diagnosticRoutes = require('./routes/diagnostic');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -130,6 +131,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/data-management', dataManagementRoutes);
+app.use('/api/diagnostic', diagnosticRoutes); // Diagnostic tools for debugging
 
 // Health check
 app.get('/api/health', (req, res) => {
