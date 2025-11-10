@@ -324,6 +324,34 @@ export default function POS() {
 
   const totals = calculateTotals();
 
+  // Force sync function for emergency
+  const forceFullSync = async () => {
+    try {
+      toast.loading('🔥 FORCE SYNCING ALL DATA FROM SHOPIFY...', { duration: 10000 });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/data-management/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        toast.dismiss();
+        toast.success('✅ SYNC COMPLETE! Reloading...', { duration: 3000 });
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        toast.dismiss();
+        toast.error('❌ Sync failed. Contact admin.');
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error('❌ Error: ' + error.message);
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -331,6 +359,9 @@ export default function POS() {
       </div>
     );
   }
+
+  // AGGRESSIVE: Show sync button if no products and not loading
+  const showEmergencySync = !loadingProducts && products.length === 0;
 
   return (
     <Layout title="Point of Sale">
@@ -427,7 +458,41 @@ export default function POS() {
 
           {!loadingProducts && filteredProducts.length === 0 && (
             <div className="text-center py-12 bg-white rounded-lg">
-              <p className="text-gray-500">No products found</p>
+              <p className="text-gray-500 mb-6">No products found</p>
+              
+              {/* EMERGENCY SYNC BUTTON */}
+              {products.length === 0 && (
+                <div className="max-w-md mx-auto">
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 mb-4">
+                    <h3 className="text-lg font-bold text-red-800 mb-2">⚠️ No Inventory Available</h3>
+                    <p className="text-sm text-red-600 mb-4">
+                      Your store has no products. This could mean:<br/>
+                      • Inventory hasn't been synced yet<br/>
+                      • Your store assignment is incorrect<br/>
+                      • Shopify sync hasn't completed
+                    </p>
+                    <button
+                      onClick={forceFullSync}
+                      className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition text-lg shadow-lg"
+                    >
+                      🔥 FORCE SYNC FROM SHOPIFY NOW
+                    </button>
+                    <p className="text-xs text-red-500 mt-3">
+                      This will sync all stores, products, and inventory from Shopify.<br/>
+                      Takes 10-15 minutes. You'll be reloaded when complete.
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      window.location.href = '/admin';
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Or go to Admin Panel to check settings
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

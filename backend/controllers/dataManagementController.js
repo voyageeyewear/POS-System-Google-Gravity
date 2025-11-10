@@ -411,3 +411,77 @@ exports.refreshData = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// DIAGNOSTIC: Check database state
+exports.getDatabaseStatus = async (req, res) => {
+  try {
+    const storeRepo = getStoreRepository();
+    const userRepo = getUserRepository();
+    const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
+
+    // Get counts
+    const storeCount = await storeRepo.count();
+    const userCount = await userRepo.count();
+    const productCount = await productRepo.count();
+    const inventoryCount = await inventoryRepo.count();
+
+    // Get stores with details
+    const stores = await storeRepo.find();
+    
+    // Get users with store assignments
+    const users = await userRepo.find({ relations: ['assignedStore'] });
+    
+    // Get inventory grouped by store
+    const inventoryByStore = {};
+    for (const store of stores) {
+      const inventory = await inventoryRepo.find({
+        where: { storeId: store.id },
+        relations: ['product']
+      });
+      inventoryByStore[store.name] = {
+        storeId: store.id,
+        totalItems: inventory.length,
+        activeItems: inventory.filter(i => i.quantity > 0 && i.product?.isActive).length,
+        totalQuantity: inventory.reduce((sum, i) => sum + i.quantity, 0)
+      };
+    }
+
+    // Get user assignments
+    const userAssignments = users.map(u => ({
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      assignedStoreId: u.assignedStoreId,
+      assignedStoreName: u.assignedStore?.name || 'None'
+    }));
+
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      counts: {
+        stores: storeCount,
+        users: userCount,
+        products: productCount,
+        inventory: inventoryCount
+      },
+      stores: stores.map(s => ({
+        id: s.id,
+        name: s.name,
+        location: s.location,
+        shopifyLocationId: s.shopifyLocationId
+      })),
+      inventoryByStore,
+      userAssignments,
+      issues: [
+        storeCount === 0 && '❌ No stores in database',
+        productCount === 0 && '❌ No products in database',
+        inventoryCount === 0 && '❌ No inventory records in database',
+        users.some(u => u.role === 'cashier' && !u.assignedStoreId) && '⚠️ Some cashiers have no store assigned'
+      ].filter(Boolean)
+    });
+  } catch (error) {
+    console.error('Database status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
