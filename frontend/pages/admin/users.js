@@ -62,7 +62,7 @@ export default function UsersManagement() {
       };
 
       if (editingUser) {
-        await authAPI.updateUser(editingUser._id, userData);
+        await authAPI.updateUser(editingUser.id || editingUser._id, userData);
         toast.success('User updated successfully');
       } else {
         userData.password = formData.password;
@@ -86,7 +86,7 @@ export default function UsersManagement() {
       email: user.email,
       password: '',
       role: user.role,
-      assignedStore: user.assignedStore?._id || '',
+      assignedStore: user.assignedStore?.id || user.assignedStore?._id || '',
     });
     setShowModal(true);
   };
@@ -211,7 +211,7 @@ export default function UsersManagement() {
                         <Edit className="w-4 h-4 text-gray-600" />
                       </button>
                       <button
-                        onClick={() => handleDelete(usr._id)}
+                        onClick={() => handleDelete(usr.id || usr._id)}
                         className="p-1 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -313,7 +313,7 @@ export default function UsersManagement() {
                 >
                   <option value="">No store (Admin only)</option>
                   {stores.map((store) => (
-                    <option key={store._id} value={store._id}>
+                    <option key={store.id || store._id} value={store.id || store._id}>
                       {store.name}
                     </option>
                   ))}
