@@ -1,5 +1,10 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { AppDataSource } = require('../data-source');
+const { UserMethods } = require('../entities/User');
+
+// Get User repository
+const getUserRepository = () => AppDataSource.getRepository('User');
+const getStoreRepository = () => AppDataSource.getRepository('Store');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -10,26 +15,33 @@ const generateToken = (userId) => {
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, assignedStore } = req.body;
+    const userRepo = getUserRepository();
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await userRepo.findOne({ where: { email: email.toLowerCase() } });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    const user = new User({
+    // Hash password
+    const hashedPassword = await UserMethods.hashPassword(password);
+
+    const user = userRepo.create({
       name,
-      email,
-      password,
+      email: email.toLowerCase(),
+      password: hashedPassword,
       role: role || 'cashier',
-      assignedStore: assignedStore || null
+      assignedStoreId: assignedStore || null
     });
 
-    await user.save();
+    await userRepo.save(user);
+    
+    // Return user without password
+    const userResponse = UserMethods.toJSON(user);
     
     res.status(201).json({
       message: 'User created successfully',
-      user
+      user: userResponse
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -40,9 +52,15 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const userRepo = getUserRepository();
 
-    // Find user
-    const user = await User.findOne({ email }).populate('assignedStore');
+    // Find user with password field
+    const user = await userRepo.findOne({
+      where: { email: email.toLowerCase() },
+      relations: ['assignedStore'],
+      select: ['id', 'name', 'email', 'password', 'role', 'assignedStoreId', 'isActive', 'createdAt', 'updatedAt']
+    });
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -53,18 +71,21 @@ exports.login = async (req, res) => {
     }
 
     // Check password
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await UserMethods.comparePassword(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
+
+    // Return user without password
+    const userResponse = UserMethods.toJSON(user);
 
     res.json({
       message: 'Login successful',
       token,
-      user
+      user: userResponse
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -85,21 +106,27 @@ exports.updateUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const updates = req.body;
+    const userRepo = getUserRepository();
 
     // Don't allow password update through this endpoint
     delete updates.password;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      updates,
-      { new: true, runValidators: true }
-    ).populate('assignedStore');
+    const user = await userRepo.findOne({
+      where: { id: parseInt(userId) },
+      relations: ['assignedStore']
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ message: 'User updated successfully', user });
+    // Update user fields
+    Object.assign(user, updates);
+    await userRepo.save(user);
+
+    const userResponse = UserMethods.toJSON(user);
+
+    res.json({ message: 'User updated successfully', user: userResponse });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -108,8 +135,15 @@ exports.updateUser = async (req, res) => {
 // Get all users (Admin only)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().populate('assignedStore').sort({ createdAt: -1 });
-    res.json({ users });
+    const userRepo = getUserRepository();
+    const users = await userRepo.find({
+      relations: ['assignedStore'],
+      order: { createdAt: 'DESC' }
+    });
+
+    const usersResponse = users.map(user => UserMethods.toJSON(user));
+    
+    res.json({ users: usersResponse });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -119,15 +153,17 @@ exports.getAllUsers = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    const userRepo = getUserRepository();
     
-    const user = await User.findByIdAndDelete(userId);
+    const user = await userRepo.findOne({ where: { id: parseInt(userId) } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    await userRepo.remove(user);
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
-

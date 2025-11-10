@@ -1,10 +1,14 @@
-const Store = require('../models/Store');
-const User = require('../models/User');
-const Product = require('../models/Product');
-const Sale = require('../models/Sale');
-const Customer = require('../models/Customer');
+const { AppDataSource } = require('../data-source');
 const fs = require('fs');
 const path = require('path');
+
+// Get repositories
+const getStoreRepository = () => AppDataSource.getRepository('Store');
+const getUserRepository = () => AppDataSource.getRepository('User');
+const getProductRepository = () => AppDataSource.getRepository('Product');
+const getSaleRepository = () => AppDataSource.getRepository('Sale');
+const getCustomerRepository = () => AppDataSource.getRepository('Customer');
+const getInventoryRepository = () => AppDataSource.getRepository('Inventory');
 
 // Create full backup
 exports.createBackup = async (req, res) => {
@@ -12,11 +16,11 @@ exports.createBackup = async (req, res) => {
     const { backupName, backupType, format, description } = req.body;
 
     // Fetch all data from database
-    const stores = await Store.find().lean();
-    const users = await User.find().select('-password').lean(); // Exclude passwords
-    const products = await Product.find().lean();
-    const sales = await Sale.find().populate(['store', 'cashier', 'customer']).lean();
-    const customers = await Customer.find().lean();
+    const stores = await getStoreRepository().find();
+    const users = await getUserRepository().find({ select: ['id', 'name', 'email', 'role', 'assignedStoreId', 'isActive', 'createdAt', 'updatedAt'] }); // Exclude passwords
+    const products = await getProductRepository().find({ relations: ['inventory'] });
+    const sales = await getSaleRepository().find({ relations: ['store', 'cashier', 'customer', 'items'] });
+    const customers = await getCustomerRepository().find();
 
     const backupData = {
       metadata: {
@@ -26,7 +30,7 @@ exports.createBackup = async (req, res) => {
         description: description || '',
         createdAt: new Date().toISOString(),
         createdBy: req.user.email,
-        version: '1.0'
+        version: '2.0-PostgreSQL'
       },
       data: {
         stores,
@@ -123,11 +127,24 @@ exports.getAllBackups = async (req, res) => {
 // Clean up all data
 exports.cleanupData = async (req, res) => {
   try {
+    const saleRepo = getSaleRepository();
+    const customerRepo = getCustomerRepository();
+    const productRepo = getProductRepository();
+    const userRepo = getUserRepository();
+    const inventoryRepo = getInventoryRepository();
+
     // Delete all data (except admin users)
-    await Sale.deleteMany({});
-    await Customer.deleteMany({});
-    await Product.deleteMany({});
-    await User.deleteMany({ role: { $ne: 'admin' } }); // Keep admin users
+    await saleRepo.delete({}); // This will cascade to SaleItems
+    await customerRepo.delete({});
+    await inventoryRepo.delete({});
+    await productRepo.delete({});
+    
+    // Delete non-admin users
+    const nonAdminUsers = await userRepo.find({ where: { role: 'cashier' } });
+    if (nonAdminUsers.length > 0) {
+      await userRepo.remove(nonAdminUsers);
+    }
+    
     // Note: We keep stores as they're linked to Shopify locations
 
     res.json({
@@ -136,6 +153,7 @@ exports.cleanupData = async (req, res) => {
         sales: 'All',
         customers: 'All',
         products: 'All',
+        inventory: 'All',
         users: 'All non-admin users'
       }
     });
@@ -149,22 +167,24 @@ exports.cleanupData = async (req, res) => {
 exports.refreshData = async (req, res) => {
   try {
     const axios = require('axios');
-    const SHOPIFY_API_URL = process.env.SHOPIFY_API_URL;
-    const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+    const shopDomain = process.env.SHOPIFY_SHOP_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-01';
+    const SHOPIFY_API_URL = `https://${shopDomain}/admin/api/${apiVersion}`;
 
     // Fetch latest products
     const productsResponse = await axios.get(`${SHOPIFY_API_URL}/products.json`, {
-      headers: { 'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN }
+      headers: { 'X-Shopify-Access-Token': accessToken }
     });
 
     // Fetch latest locations
     const locationsResponse = await axios.get(`${SHOPIFY_API_URL}/locations.json`, {
-      headers: { 'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN }
+      headers: { 'X-Shopify-Access-Token': accessToken }
     });
 
     // Fetch inventory levels
     const inventoryResponse = await axios.get(`${SHOPIFY_API_URL}/inventory_levels.json`, {
-      headers: { 'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN },
+      headers: { 'X-Shopify-Access-Token': accessToken },
       params: { limit: 250 }
     });
 
@@ -181,4 +201,3 @@ exports.refreshData = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-

@@ -1,12 +1,17 @@
-const Store = require('../models/Store');
-const Product = require('../models/Product');
+const { AppDataSource } = require('../data-source');
 const shopifyService = require('../utils/shopify');
+
+// Get repositories
+const getStoreRepository = () => AppDataSource.getRepository('Store');
+const getProductRepository = () => AppDataSource.getRepository('Product');
+const getInventoryRepository = () => AppDataSource.getRepository('Inventory');
 
 // Create new store
 exports.createStore = async (req, res) => {
   try {
-    const store = new Store(req.body);
-    await store.save();
+    const storeRepo = getStoreRepository();
+    const store = storeRepo.create(req.body);
+    await storeRepo.save(store);
     
     res.status(201).json({
       message: 'Store created successfully',
@@ -20,7 +25,10 @@ exports.createStore = async (req, res) => {
 // Get all stores
 exports.getAllStores = async (req, res) => {
   try {
-    const stores = await Store.find().sort({ createdAt: -1 });
+    const storeRepo = getStoreRepository();
+    const stores = await storeRepo.find({
+      order: { createdAt: 'DESC' }
+    });
     res.json({ stores });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -31,7 +39,10 @@ exports.getAllStores = async (req, res) => {
 exports.getStore = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const store = await Store.findById(storeId);
+    const storeRepo = getStoreRepository();
+    const store = await storeRepo.findOne({
+      where: { id: parseInt(storeId) }
+    });
     
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
@@ -47,15 +58,18 @@ exports.getStore = async (req, res) => {
 exports.updateStore = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const store = await Store.findByIdAndUpdate(
-      storeId,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const storeRepo = getStoreRepository();
+    
+    const store = await storeRepo.findOne({
+      where: { id: parseInt(storeId) }
+    });
 
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
+
+    Object.assign(store, req.body);
+    await storeRepo.save(store);
 
     res.json({ message: 'Store updated successfully', store });
   } catch (error) {
@@ -67,11 +81,17 @@ exports.updateStore = async (req, res) => {
 exports.deleteStore = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const store = await Store.findByIdAndDelete(storeId);
+    const storeRepo = getStoreRepository();
+    
+    const store = await storeRepo.findOne({
+      where: { id: parseInt(storeId) }
+    });
     
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
+
+    await storeRepo.remove(store);
 
     res.json({ message: 'Store deleted successfully' });
   } catch (error) {
@@ -83,37 +103,38 @@ exports.deleteStore = async (req, res) => {
 exports.getStoreInventory = async (req, res) => {
   try {
     const { storeId } = req.params;
+    const inventoryRepo = getInventoryRepository();
     
-    const products = await Product.find({
-      'inventory.store': storeId,
-      isActive: true
+    // Get inventory items for this store with product details
+    const inventoryItems = await inventoryRepo.find({
+      where: { 
+        storeId: parseInt(storeId)
+      },
+      relations: ['product'],
+      order: { 'product.name': 'ASC' }
     });
 
-    // Filter inventory to show only the requested store AND only products with quantity > 0
-    const inventoryData = products
-      .map(product => {
-        const storeInventory = product.inventory.find(
-          inv => inv.store.toString() === storeId
-        );
-        
-        return {
-          _id: product._id,
-          name: product.name,
-          sku: product.sku,
-          category: product.category,
-          price: product.price,
-          taxRate: product.taxRate,
-          description: product.description,
-          image: product.image,
-          quantity: storeInventory ? storeInventory.quantity : 0
-        };
-      })
-      .filter(item => item.quantity > 0); // Only return products with stock available
+    // Filter for products with quantity > 0 and isActive
+    const inventoryData = inventoryItems
+      .filter(inv => inv.quantity > 0 && inv.product && inv.product.isActive)
+      .map(inv => ({
+        _id: inv.product.id, // Keep using _id for frontend compatibility
+        id: inv.product.id,
+        name: inv.product.name,
+        sku: inv.product.sku,
+        category: inv.product.category,
+        price: parseFloat(inv.product.price),
+        taxRate: inv.product.taxRate,
+        description: inv.product.description,
+        image: inv.product.image,
+        quantity: inv.quantity
+      }));
 
     console.log(`📦 Store ${storeId}: Returning ${inventoryData.length} products with available stock`);
 
     res.json({ inventory: inventoryData });
   } catch (error) {
+    console.error('Error in getStoreInventory:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -123,6 +144,7 @@ exports.syncFromShopify = async (req, res) => {
   try {
     const shopifyLocations = await shopifyService.getLocations();
     const syncResults = { created: 0, updated: 0, errors: [] };
+    const storeRepo = getStoreRepository();
 
     for (const location of shopifyLocations) {
       try {
@@ -145,15 +167,17 @@ exports.syncFromShopify = async (req, res) => {
         };
 
         // Check if store exists
-        const existingStore = await Store.findOne({
-          shopifyLocationId: location.id.toString()
+        const existingStore = await storeRepo.findOne({
+          where: { shopifyLocationId: location.id.toString() }
         });
 
         if (existingStore) {
-          await Store.findByIdAndUpdate(existingStore._id, storeData);
+          Object.assign(existingStore, storeData);
+          await storeRepo.save(existingStore);
           syncResults.updated++;
         } else {
-          await Store.create(storeData);
+          const newStore = storeRepo.create(storeData);
+          await storeRepo.save(newStore);
           syncResults.created++;
         }
       } catch (error) {
@@ -172,4 +196,3 @@ exports.syncFromShopify = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-

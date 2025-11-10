@@ -1,7 +1,8 @@
+require('reflect-metadata');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/database');
+const { AppDataSource } = require('./data-source');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -14,8 +15,15 @@ const dataManagementRoutes = require('./routes/dataManagement');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
-connectDB();
+// Initialize TypeORM
+AppDataSource.initialize()
+  .then(() => {
+    console.log('✅ PostgreSQL connected via TypeORM');
+  })
+  .catch((error) => {
+    console.error('❌ TypeORM initialization error:', error);
+    process.exit(1);
+  });
 
 // Middleware
 app.use(cors());

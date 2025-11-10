@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { AppDataSource } = require('../data-source');
+const { UserMethods } = require('../entities/User');
+
+// Get User repository
+const getUserRepository = () => AppDataSource.getRepository('User');
 
 // Verify JWT token
 exports.authenticate = async (req, res, next) => {
@@ -11,13 +15,19 @@ exports.authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).populate('assignedStore');
+    const userRepo = getUserRepository();
+    
+    const user = await userRepo.findOne({
+      where: { id: decoded.userId },
+      relations: ['assignedStore']
+    });
     
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'Invalid authentication' });
     }
 
-    req.user = user;
+    req.user = UserMethods.toJSON(user);
+    req.user.assignedStore = user.assignedStore; // Preserve the relation
     req.token = token;
     next();
   } catch (error) {
@@ -43,10 +53,9 @@ exports.hasStoreAccess = (req, res, next) => {
   }
   
   // Cashier can only access their assigned store
-  if (req.user.assignedStore && req.user.assignedStore._id.toString() === storeId) {
+  if (req.user.assignedStore && req.user.assignedStore.id.toString() === storeId) {
     return next();
   }
   
   return res.status(403).json({ error: 'Access denied to this store' });
 };
-

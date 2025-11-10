@@ -1,11 +1,17 @@
-const Product = require('../models/Product');
+const { AppDataSource } = require('../data-source');
+const { Like } = require('typeorm');
 const shopifyService = require('../utils/shopify');
+
+// Get repositories
+const getProductRepository = () => AppDataSource.getRepository('Product');
+const getInventoryRepository = () => AppDataSource.getRepository('Inventory');
 
 // Create product
 exports.createProduct = async (req, res) => {
   try {
-    const product = new Product(req.body);
-    await product.save();
+    const productRepo = getProductRepository();
+    const product = productRepo.create(req.body);
+    await productRepo.save(product);
     
     res.status(201).json({
       message: 'Product created successfully',
@@ -20,36 +26,66 @@ exports.createProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     const { category, search, page = 1, limit = 50 } = req.query;
-    const query = { isActive: true };
+    const productRepo = getProductRepository();
+    
+    const where = { isActive: true };
     
     if (category) {
-      query.category = category;
+      where.category = category;
     }
     
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Calculate pagination
+    // For search, we'll handle it separately due to TypeORM limitations with OR
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // Get total count for pagination
-    const total = await Product.countDocuments(query);
+    let queryBuilder = productRepo.createQueryBuilder('product')
+      .where('product.isActive = :isActive', { isActive: true });
 
-    // Get paginated products
-    const products = await Product.find(query)
-      .populate('inventory.store')
+    if (category) {
+      queryBuilder.andWhere('product.category = :category', { category });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(LOWER(product.name) LIKE LOWER(:search) OR LOWER(product.sku) LIKE LOWER(:search))',
+        { search: `%${search}%` }
+      );
+    }
+
+    // Get total count
+    const total = await queryBuilder.getCount();
+
+    // Get paginated products with inventory
+    const products = await queryBuilder
+      .leftJoinAndSelect('product.inventory', 'inventory')
+      .leftJoinAndSelect('inventory.store', 'store')
       .skip(skip)
-      .limit(limitNum)
-      .sort({ createdAt: -1 });
+      .take(limitNum)
+      .orderBy('product.createdAt', 'DESC')
+      .getMany();
+
+    // Transform products to match frontend expectations
+    const transformedProducts = products.map(product => ({
+      _id: product.id,
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      category: product.category,
+      price: parseFloat(product.price),
+      taxRate: product.taxRate,
+      description: product.description,
+      image: product.image,
+      shopifyProductId: product.shopifyProductId,
+      shopifyVariantId: product.shopifyVariantId,
+      isActive: product.isActive,
+      inventory: product.inventory || [],
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt
+    }));
 
     res.json({ 
-      products,
+      products: transformedProducts,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -58,6 +94,7 @@ exports.getAllProducts = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in getAllProducts:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -66,7 +103,12 @@ exports.getAllProducts = async (req, res) => {
 exports.getProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const product = await Product.findById(productId).populate('inventory.store');
+    const productRepo = getProductRepository();
+    
+    const product = await productRepo.findOne({
+      where: { id: parseInt(productId) },
+      relations: ['inventory', 'inventory.store']
+    });
     
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
@@ -82,15 +124,19 @@ exports.getProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('inventory.store');
+    const productRepo = getProductRepository();
+    
+    const product = await productRepo.findOne({
+      where: { id: parseInt(productId) },
+      relations: ['inventory', 'inventory.store']
+    });
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    Object.assign(product, req.body);
+    await productRepo.save(product);
 
     res.json({ message: 'Product updated successfully', product });
   } catch (error) {
@@ -98,19 +144,22 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Delete product
+// Delete product (soft delete)
 exports.deleteProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      { isActive: false },
-      { new: true }
-    );
+    const productRepo = getProductRepository();
+    
+    const product = await productRepo.findOne({
+      where: { id: parseInt(productId) }
+    });
     
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    product.isActive = false;
+    await productRepo.save(product);
 
     res.json({ message: 'Product deactivated successfully' });
   } catch (error) {
@@ -123,27 +172,41 @@ exports.updateInventory = async (req, res) => {
   try {
     const { productId } = req.params;
     const { storeId, quantity } = req.body;
+    
+    const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
 
-    const product = await Product.findById(productId);
+    const product = await productRepo.findOne({
+      where: { id: parseInt(productId) }
+    });
+    
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Find if inventory entry exists for this store
-    const inventoryIndex = product.inventory.findIndex(
-      inv => inv.store.toString() === storeId
-    );
+    // Find or create inventory entry
+    let inventory = await inventoryRepo.findOne({
+      where: { 
+        productId: parseInt(productId),
+        storeId: parseInt(storeId)
+      }
+    });
 
-    if (inventoryIndex > -1) {
-      product.inventory[inventoryIndex].quantity = quantity;
+    if (inventory) {
+      inventory.quantity = quantity;
     } else {
-      product.inventory.push({ store: storeId, quantity });
+      inventory = inventoryRepo.create({
+        productId: parseInt(productId),
+        storeId: parseInt(storeId),
+        quantity
+      });
     }
 
-    await product.save();
+    await inventoryRepo.save(inventory);
 
-    res.json({ message: 'Inventory updated successfully', product });
+    res.json({ message: 'Inventory updated successfully', inventory });
   } catch (error) {
+    console.error('Error in updateInventory:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -154,12 +217,12 @@ exports.syncFromShopify = async (req, res) => {
     console.log('🔄 Starting Shopify product sync...');
     const shopifyProducts = await shopifyService.getProducts();
     const syncResults = { created: 0, updated: 0, errors: [] };
+    const productRepo = getProductRepository();
 
     console.log(`📦 Processing ${shopifyProducts.length} products from Shopify...`);
 
     for (const shopifyProduct of shopifyProducts) {
       try {
-        // For simplicity, we'll use the first variant
         const variant = shopifyProduct.variants[0];
         
         // Determine category based on product type or tags
@@ -186,7 +249,7 @@ exports.syncFromShopify = async (req, res) => {
           sku: variant.sku || `SHOPIFY-${variant.id}`,
           category,
           price: parseFloat(variant.price),
-          taxRate, // Explicitly set tax rate
+          taxRate,
           description: shopifyProduct.body_html || '',
           image: shopifyProduct.image?.src || '',
           shopifyProductId: shopifyProduct.id.toString(),
@@ -194,16 +257,18 @@ exports.syncFromShopify = async (req, res) => {
         };
 
         // Check if product exists
-        const existingProduct = await Product.findOne({
-          shopifyProductId: shopifyProduct.id.toString()
+        const existingProduct = await productRepo.findOne({
+          where: { shopifyProductId: shopifyProduct.id.toString() }
         });
 
         if (existingProduct) {
-          await Product.findByIdAndUpdate(existingProduct._id, productData);
+          Object.assign(existingProduct, productData);
+          await productRepo.save(existingProduct);
           syncResults.updated++;
           console.log(`✏️ Updated: ${productData.name}`);
         } else {
-          await Product.create(productData);
+          const newProduct = productRepo.create(productData);
+          await productRepo.save(newProduct);
           syncResults.created++;
           console.log(`✨ Created: ${productData.name}`);
         }
@@ -227,4 +292,3 @@ exports.syncFromShopify = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-

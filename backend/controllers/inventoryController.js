@@ -1,12 +1,29 @@
-const Product = require('../models/Product');
-const Store = require('../models/Store');
+const { AppDataSource } = require('../data-source');
 const shopifyService = require('../utils/shopify');
+
+// Get repositories
+const getProductRepository = () => AppDataSource.getRepository('Product');
+const getStoreRepository = () => AppDataSource.getRepository('Store');
+const getInventoryRepository = () => AppDataSource.getRepository('Inventory');
 
 // Sync inventory from Shopify
 exports.syncInventoryFromShopify = async (req, res) => {
   try {
-    const stores = await Store.find({ shopifyLocationId: { $ne: null } });
-    const products = await Product.find({ shopifyVariantId: { $ne: null } });
+    const storeRepo = getStoreRepository();
+    const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
+
+    // Get stores with Shopify location IDs
+    const stores = await storeRepo
+      .createQueryBuilder('store')
+      .where('store.shopifyLocationId IS NOT NULL')
+      .getMany();
+
+    // Get products with Shopify variant IDs
+    const products = await productRepo
+      .createQueryBuilder('product')
+      .where('product.shopifyVariantId IS NOT NULL')
+      .getMany();
 
     if (stores.length === 0) {
       return res.status(400).json({ 
@@ -47,7 +64,7 @@ exports.syncInventoryFromShopify = async (req, res) => {
       }
     }
 
-    // Get inventory levels from Shopify (batch request)
+    // Get inventory levels from Shopify
     if (inventoryItemIds.length > 0) {
       const inventoryLevels = await shopifyService.getInventoryLevels(inventoryItemIds);
 
@@ -62,7 +79,7 @@ exports.syncInventoryFromShopify = async (req, res) => {
         inventoryMap.get(locationId).set(level.inventory_item_id, level.available || 0);
       }
 
-      // Update products with inventory for each store
+      // Update inventory for each store
       for (const store of stores) {
         const locationInventory = inventoryMap.get(store.shopifyLocationId);
         
@@ -72,18 +89,25 @@ exports.syncInventoryFromShopify = async (req, res) => {
             
             if (product) {
               try {
-                // Find if inventory entry exists for this store
-                const inventoryIndex = product.inventory.findIndex(
-                  inv => inv.store.toString() === store._id.toString()
-                );
+                // Find or create inventory entry
+                let inventory = await inventoryRepo.findOne({
+                  where: {
+                    productId: product.id,
+                    storeId: store.id
+                  }
+                });
 
-                if (inventoryIndex > -1) {
-                  product.inventory[inventoryIndex].quantity = quantity;
+                if (inventory) {
+                  inventory.quantity = quantity;
                 } else {
-                  product.inventory.push({ store: store._id, quantity });
+                  inventory = inventoryRepo.create({
+                    productId: product.id,
+                    storeId: store.id,
+                    quantity
+                  });
                 }
 
-                await product.save();
+                await inventoryRepo.save(inventory);
                 syncResults.updated++;
               } catch (error) {
                 syncResults.errors.push({
@@ -111,7 +135,14 @@ exports.syncInventoryFromShopify = async (req, res) => {
 // Get inventory summary
 exports.getInventorySummary = async (req, res) => {
   try {
-    const products = await Product.find({ isActive: true }).populate('inventory.store');
+    const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
+    
+    // Get all active products with their inventory
+    const products = await productRepo.find({
+      where: { isActive: true },
+      relations: ['inventory', 'inventory.store']
+    });
     
     const summary = {
       totalProducts: products.length,
@@ -126,11 +157,11 @@ exports.getInventorySummary = async (req, res) => {
     for (const product of products) {
       let productTotal = 0;
       
-      for (const inv of product.inventory) {
+      for (const inv of product.inventory || []) {
         const quantity = inv.quantity || 0;
         productTotal += quantity;
         
-        const storeId = inv.store._id.toString();
+        const storeId = inv.store.id;
         if (!storeMap.has(storeId)) {
           storeMap.set(storeId, {
             store: inv.store.name,
@@ -156,7 +187,7 @@ exports.getInventorySummary = async (req, res) => {
 
     res.json({ summary });
   } catch (error) {
+    console.error('Error in getInventorySummary:', error);
     res.status(400).json({ error: error.message });
   }
 };
-

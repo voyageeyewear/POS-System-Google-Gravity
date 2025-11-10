@@ -1,27 +1,32 @@
+require('reflect-metadata');
 require('dotenv').config({ path: '../.env' });
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Store = require('../models/Store');
-const Product = require('../models/Product');
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/pos-system';
+const { AppDataSource } = require('../data-source');
+const { UserMethods } = require('../entities/User');
 
 async function seedData() {
   try {
     console.log('🌱 Starting database seed...');
     
-    // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    // Initialize TypeORM connection
+    await AppDataSource.initialize();
+    console.log('✅ Connected to PostgreSQL');
+
+    // Get repositories
+    const userRepo = AppDataSource.getRepository('User');
+    const storeRepo = AppDataSource.getRepository('Store');
+    const productRepo = AppDataSource.getRepository('Product');
+    const inventoryRepo = AppDataSource.getRepository('Inventory');
 
     // Clear existing data
-    await User.deleteMany({});
-    await Store.deleteMany({});
-    await Product.deleteMany({});
-    console.log('🗑️  Cleared existing data');
+    console.log('🗑️  Clearing existing data...');
+    await inventoryRepo.delete({});
+    await productRepo.delete({});
+    await userRepo.delete({});
+    await storeRepo.delete({});
+    console.log('✅ Cleared existing data');
 
     // Create stores
-    const stores = await Store.insertMany([
+    const storeData = [
       {
         name: 'Downtown Store',
         location: 'Downtown',
@@ -64,50 +69,53 @@ async function seedData() {
         email: 'airport@eyewear.com',
         isActive: true
       }
-    ]);
+    ];
+
+    const stores = [];
+    for (const data of storeData) {
+      const store = storeRepo.create(data);
+      await storeRepo.save(store);
+      stores.push(store);
+    }
     console.log(`✅ Created ${stores.length} stores`);
 
     // Create admin user
-    const admin = await User.create({
+    const adminPassword = await UserMethods.hashPassword('admin123');
+    const admin = userRepo.create({
       name: 'Admin User',
       email: 'admin@pos.com',
-      password: 'admin123',
+      password: adminPassword,
       role: 'admin',
       isActive: true
     });
+    await userRepo.save(admin);
     console.log('✅ Created admin user (email: admin@pos.com, password: admin123)');
 
     // Create cashier users for each store
-    const cashiers = await User.insertMany([
-      {
-        name: 'John Cashier',
-        email: 'john@pos.com',
-        password: 'cashier123',
+    const cashierData = [
+      { name: 'John Cashier', email: 'john@pos.com', storeId: stores[0].id },
+      { name: 'Sarah Cashier', email: 'sarah@pos.com', storeId: stores[1].id },
+      { name: 'Mike Cashier', email: 'mike@pos.com', storeId: stores[2].id }
+    ];
+
+    const cashierPassword = await UserMethods.hashPassword('cashier123');
+    const cashiers = [];
+    for (const data of cashierData) {
+      const cashier = userRepo.create({
+        name: data.name,
+        email: data.email,
+        password: cashierPassword,
         role: 'cashier',
-        assignedStore: stores[0]._id,
+        assignedStoreId: data.storeId,
         isActive: true
-      },
-      {
-        name: 'Sarah Cashier',
-        email: 'sarah@pos.com',
-        password: 'cashier123',
-        role: 'cashier',
-        assignedStore: stores[1]._id,
-        isActive: true
-      },
-      {
-        name: 'Mike Cashier',
-        email: 'mike@pos.com',
-        password: 'cashier123',
-        role: 'cashier',
-        assignedStore: stores[2]._id,
-        isActive: true
-      }
-    ]);
+      });
+      await userRepo.save(cashier);
+      cashiers.push(cashier);
+    }
     console.log(`✅ Created ${cashiers.length} cashier users`);
 
     // Create sample products
-    const products = await Product.insertMany([
+    const productData = [
       // Frames
       {
         name: 'Classic Metal Frame',
@@ -117,12 +125,11 @@ async function seedData() {
         taxRate: 5,
         description: 'Premium metal frame with adjustable nose pads',
         image: 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 25 },
-          { store: stores[1]._id, quantity: 30 },
-          { store: stores[2]._id, quantity: 15 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 25 },
+          { storeId: stores[1].id, quantity: 30 },
+          { storeId: stores[2].id, quantity: 15 }
+        ]
       },
       {
         name: 'Designer Acetate Frame',
@@ -132,12 +139,11 @@ async function seedData() {
         taxRate: 5,
         description: 'Luxury acetate frame with spring hinges',
         image: 'https://images.unsplash.com/photo-1577803645773-f96470509666?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 20 },
-          { store: stores[1]._id, quantity: 25 },
-          { store: stores[2]._id, quantity: 10 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 20 },
+          { storeId: stores[1].id, quantity: 25 },
+          { storeId: stores[2].id, quantity: 10 }
+        ]
       },
       {
         name: 'Lightweight Titanium Frame',
@@ -147,12 +153,11 @@ async function seedData() {
         taxRate: 5,
         description: 'Ultra-light titanium frame for all-day comfort',
         image: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 15 },
-          { store: stores[1]._id, quantity: 20 },
-          { store: stores[2]._id, quantity: 12 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 15 },
+          { storeId: stores[1].id, quantity: 20 },
+          { storeId: stores[2].id, quantity: 12 }
+        ]
       },
       // Sunglasses
       {
@@ -163,12 +168,11 @@ async function seedData() {
         taxRate: 18,
         description: 'Classic aviator style with UV protection',
         image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 30 },
-          { store: stores[1]._id, quantity: 35 },
-          { store: stores[2]._id, quantity: 25 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 30 },
+          { storeId: stores[1].id, quantity: 35 },
+          { storeId: stores[2].id, quantity: 25 }
+        ]
       },
       {
         name: 'Wayfarer Sunglasses',
@@ -178,42 +182,11 @@ async function seedData() {
         taxRate: 18,
         description: 'Iconic wayfarer design with polarized lenses',
         image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 28 },
-          { store: stores[1]._id, quantity: 32 },
-          { store: stores[2]._id, quantity: 20 }
-        ],
-        isActive: true
-      },
-      {
-        name: 'Sport Sunglasses',
-        sku: 'SUN-003',
-        category: 'sunglass',
-        price: 4499,
-        taxRate: 18,
-        description: 'Performance sport sunglasses with wraparound design',
-        image: 'https://images.unsplash.com/photo-1508296695146-257a814070b4?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 18 },
-          { store: stores[1]._id, quantity: 22 },
-          { store: stores[2]._id, quantity: 15 }
-        ],
-        isActive: true
-      },
-      {
-        name: 'Cat Eye Sunglasses',
-        sku: 'SUN-004',
-        category: 'sunglass',
-        price: 3299,
-        taxRate: 18,
-        description: 'Retro cat eye style with gradient lenses',
-        image: 'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 22 },
-          { store: stores[1]._id, quantity: 28 },
-          { store: stores[2]._id, quantity: 16 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 28 },
+          { storeId: stores[1].id, quantity: 32 },
+          { storeId: stores[2].id, quantity: 20 }
+        ]
       },
       // Accessories
       {
@@ -224,12 +197,11 @@ async function seedData() {
         taxRate: 18,
         description: 'Premium microfiber cloth for lens cleaning',
         image: 'https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 100 },
-          { store: stores[1]._id, quantity: 120 },
-          { store: stores[2]._id, quantity: 80 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 100 },
+          { storeId: stores[1].id, quantity: 120 },
+          { storeId: stores[2].id, quantity: 80 }
+        ]
       },
       {
         name: 'Hard Case',
@@ -239,30 +211,35 @@ async function seedData() {
         taxRate: 18,
         description: 'Protective hard case for eyewear',
         image: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 50 },
-          { store: stores[1]._id, quantity: 60 },
-          { store: stores[2]._id, quantity: 40 }
-        ],
-        isActive: true
-      },
-      {
-        name: 'Lens Cleaning Spray',
-        sku: 'ACC-003',
-        category: 'accessory',
-        price: 299,
-        taxRate: 18,
-        description: 'Anti-fog lens cleaning solution',
-        image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=400',
-        inventory: [
-          { store: stores[0]._id, quantity: 75 },
-          { store: stores[1]._id, quantity: 90 },
-          { store: stores[2]._id, quantity: 60 }
-        ],
-        isActive: true
+        inventoryData: [
+          { storeId: stores[0].id, quantity: 50 },
+          { storeId: stores[1].id, quantity: 60 },
+          { storeId: stores[2].id, quantity: 40 }
+        ]
       }
-    ]);
-    console.log(`✅ Created ${products.length} products`);
+    ];
+
+    let productCount = 0;
+    for (const data of productData) {
+      const { inventoryData, ...productFields } = data;
+      
+      // Create product
+      const product = productRepo.create(productFields);
+      await productRepo.save(product);
+      
+      // Create inventory entries
+      for (const inv of inventoryData) {
+        const inventory = inventoryRepo.create({
+          productId: product.id,
+          storeId: inv.storeId,
+          quantity: inv.quantity
+        });
+        await inventoryRepo.save(inventory);
+      }
+      
+      productCount++;
+    }
+    console.log(`✅ Created ${productCount} products with inventory`);
 
     console.log('\n🎉 Database seeded successfully!\n');
     console.log('📋 Login Credentials:');
@@ -278,6 +255,7 @@ async function seedData() {
     console.log('  Password: cashier123');
     console.log('─────────────────────────────────────\n');
 
+    await AppDataSource.destroy();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);
@@ -286,4 +264,3 @@ async function seedData() {
 }
 
 seedData();
-
