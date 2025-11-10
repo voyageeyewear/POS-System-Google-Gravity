@@ -103,16 +103,29 @@ exports.deleteStore = async (req, res) => {
 exports.getStoreInventory = async (req, res) => {
   try {
     const { storeId } = req.params;
+    
+    console.log('🔍 getStoreInventory called with storeId:', storeId);
+    console.log('🔍 User:', req.user?.email, 'Role:', req.user?.role);
+    console.log('🔍 User assignedStore:', req.user?.assignedStore);
+    
+    if (!storeId || storeId === 'undefined') {
+      return res.status(400).json({ error: 'Invalid store ID provided' });
+    }
+    
     const inventoryRepo = getInventoryRepository();
+    const storeIdInt = parseInt(storeId);
+    
+    console.log('🔍 Fetching inventory for storeId (int):', storeIdInt);
     
     // Get inventory items for this store with product details
     const inventoryItems = await inventoryRepo.find({
       where: { 
-        storeId: parseInt(storeId)
+        storeId: storeIdInt
       },
-      relations: ['product'],
-      order: { 'product.name': 'ASC' }
+      relations: ['product']
     });
+
+    console.log(`📦 Found ${inventoryItems.length} inventory items for store ${storeIdInt}`);
 
     // Filter for products with quantity > 0 and isActive
     const inventoryData = inventoryItems
@@ -130,11 +143,12 @@ exports.getStoreInventory = async (req, res) => {
         quantity: inv.quantity
       }));
 
-    console.log(`📦 Store ${storeId}: Returning ${inventoryData.length} products with available stock`);
+    console.log(`✅ Store ${storeId}: Returning ${inventoryData.length} products with available stock`);
 
     res.json({ inventory: inventoryData });
   } catch (error) {
-    console.error('Error in getStoreInventory:', error);
+    console.error('❌ Error in getStoreInventory:', error);
+    console.error('❌ Stack:', error.stack);
     res.status(400).json({ error: error.message });
   }
 };

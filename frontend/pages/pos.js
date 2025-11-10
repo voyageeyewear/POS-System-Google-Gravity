@@ -44,11 +44,27 @@ export default function POS() {
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
-      const response = await storeAPI.getInventory(user.assignedStore.id || user.assignedStore._id);
+      
+      console.log('🔍 User object:', user);
+      console.log('🔍 User assignedStore:', user.assignedStore);
+      console.log('🔍 Store ID to use:', user.assignedStore?.id || user.assignedStore?._id);
+      
+      const storeId = user.assignedStore?.id || user.assignedStore?._id;
+      
+      if (!storeId) {
+        toast.error('No store assigned to your account');
+        console.error('❌ No store ID found for user:', user);
+        return;
+      }
+      
+      console.log('📡 Fetching inventory for store ID:', storeId);
+      const response = await storeAPI.getInventory(storeId);
+      console.log('✅ Inventory response:', response.data);
       setProducts(response.data.inventory);
     } catch (error) {
       toast.error('Failed to load products');
-      console.error(error);
+      console.error('❌ Error loading products:', error);
+      console.error('❌ Error response:', error.response?.data);
     } finally {
       setLoadingProducts(false);
     }
