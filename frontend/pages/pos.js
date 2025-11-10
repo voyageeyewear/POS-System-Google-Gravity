@@ -44,7 +44,7 @@ export default function POS() {
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
-      const response = await storeAPI.getInventory(user.assignedStore._id);
+      const response = await storeAPI.getInventory(user.assignedStore.id || user.assignedStore._id);
       setProducts(response.data.inventory);
     } catch (error) {
       toast.error('Failed to load products');
@@ -178,9 +178,9 @@ export default function POS() {
     setProcessing(true);
     try {
       const saleData = {
-        storeId: user.assignedStore._id,
+        storeId: user.assignedStore.id || user.assignedStore._id,
         items: cart.map((item) => ({
-          productId: item.productId, // Use MongoDB ObjectId, not cart item id
+          productId: item.productId, // Use product ID, not cart item id
           quantity: item.quantity,
           discount: item.discount,
         })),
@@ -203,7 +203,7 @@ export default function POS() {
       // Show option to download invoice
       const downloadInvoice = window.confirm('Sale completed! Download invoice?');
       if (downloadInvoice) {
-        const invoiceResponse = await saleAPI.downloadInvoice(response.data.sale._id);
+        const invoiceResponse = await saleAPI.downloadInvoice(response.data.sale.id || response.data.sale._id);
         const url = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
         const link = document.createElement('a');
         link.href = url;
