@@ -1,0 +1,15 @@
+{
+  "name": "pos-system-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:backend": "cd backend && npm install",
+    "start": "cd backend && node server.js",
+    "build": "cd backend && npm install --production=false"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
+

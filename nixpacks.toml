@@ -1,13 +1,9 @@
 [phases.setup]
 nixPkgs = ["nodejs-18_x"]
-aptPkgs = []
 
 [phases.install]
-cmds = ["cd backend && npm ci --production=false"]
-
-[phases.build]
-cmds = []
+cmds = ["npm run build"]
 
 [start]
-cmd = "cd backend && node server.js"
+cmd = "npm start"
 
