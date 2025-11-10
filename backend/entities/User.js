@@ -73,6 +73,16 @@ class UserMethods {
 
   static toJSON(user) {
     const { password, ...userWithoutPassword } = user;
+    
+    // Ensure assignedStore has proper id field for frontend compatibility
+    if (userWithoutPassword.assignedStore) {
+      userWithoutPassword.assignedStore = {
+        ...userWithoutPassword.assignedStore,
+        id: userWithoutPassword.assignedStore.id,
+        _id: userWithoutPassword.assignedStore.id, // For backwards compatibility
+      };
+    }
+    
     return userWithoutPassword;
   }
 }

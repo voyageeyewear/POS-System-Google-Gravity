@@ -26,8 +26,8 @@ exports.authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid authentication' });
     }
 
+    // Convert user to JSON with proper assignedStore serialization
     req.user = UserMethods.toJSON(user);
-    req.user.assignedStore = user.assignedStore; // Preserve the relation
     req.token = token;
     next();
   } catch (error) {
@@ -53,7 +53,14 @@ exports.hasStoreAccess = (req, res, next) => {
   }
   
   // Cashier can only access their assigned store
-  if (req.user.assignedStore && req.user.assignedStore.id.toString() === storeId) {
+  if (!req.user.assignedStore) {
+    return res.status(403).json({ error: 'No store assigned to user' });
+  }
+  
+  const userStoreId = parseInt(req.user.assignedStore.id || req.user.assignedStore._id);
+  const requestedStoreId = parseInt(storeId);
+  
+  if (userStoreId === requestedStoreId) {
     return next();
   }
   
