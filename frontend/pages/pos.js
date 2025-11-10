@@ -23,6 +23,8 @@ export default function POS() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [processing, setProcessing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
   const ITEMS_PER_PAGE = 20;
@@ -71,6 +73,8 @@ export default function POS() {
   const loadProducts = async (forceRefresh = false) => {
     try {
       setLoadingProducts(true);
+      setLoadingProgress(0);
+      setLoadingMessage('Checking cache...');
       
       console.log('🔍 User object:', user);
       console.log('🔍 User assignedStore:', user.assignedStore);
@@ -91,8 +95,15 @@ export default function POS() {
         const cachedProducts = frontendCache.get(cacheKey);
         if (cachedProducts) {
           console.log('✅ Using cached products from localStorage');
+          setLoadingMessage('Loading from cache...');
+          setLoadingProgress(100);
+          
+          // Small delay to show the "Loading from cache" message
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           setProducts(cachedProducts);
           setLoadingProducts(false);
+          toast.success(`✅ Loaded ${cachedProducts.length} products from cache`, { duration: 2000 });
           
           // Fetch in background to update cache
           setTimeout(() => {
@@ -102,6 +113,7 @@ export default function POS() {
                   console.log('📦 Products updated in background');
                   setProducts(response.data.inventory);
                   frontendCache.set(cacheKey, response.data.inventory, 1800000); // 30 min
+                  toast('🔄 Inventory updated in background', { duration: 2000 });
                 }
               })
               .catch(err => console.error('Background update error:', err));
@@ -111,16 +123,46 @@ export default function POS() {
         }
       }
       
+      // FIRST TIME LOAD - Show progressive loading
+      setLoadingMessage('Connecting to server...');
+      setLoadingProgress(10);
+      
+      // Simulate progress during API call
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev < 80) {
+            return prev + 5;
+          }
+          return prev;
+        });
+      }, 200);
+      
+      setLoadingMessage('Fetching inventory data...');
       console.log('📡 Fetching inventory for store ID:', storeId);
+      
       const response = await storeAPI.getInventory(storeId);
+      
+      clearInterval(progressInterval);
+      setLoadingProgress(90);
+      setLoadingMessage('Processing products...');
+      
       console.log('✅ Inventory response:', response.data);
       
       const inventory = response.data.inventory;
+      
+      // Small delay to show processing message
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setLoadingProgress(100);
+      setLoadingMessage('Ready!');
+      
       setProducts(inventory);
       
       // Cache the products for 30 minutes
       frontendCache.set(cacheKey, inventory, 1800000);
       console.log(`💾 Cached ${inventory.length} products for 30 minutes`);
+      
+      toast.success(`✅ Loaded ${inventory.length} products`, { duration: 2000 });
       
     } catch (error) {
       toast.error('Failed to load products');
@@ -128,6 +170,7 @@ export default function POS() {
       console.error('❌ Error response:', error.response?.data);
     } finally {
       setLoadingProducts(false);
+      setLoadingProgress(0);
     }
   };
 
@@ -363,8 +406,63 @@ export default function POS() {
   // AGGRESSIVE: Show sync button if no products and not loading
   const showEmergencySync = !loadingProducts && products.length === 0;
 
+  // Loading Overlay Component
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-white bg-opacity-95 z-50 flex items-center justify-center">
+      <div className="max-w-md w-full px-6">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500 rounded-full mb-4 animate-pulse">
+            <ShoppingCart className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            {loadingMessage}
+          </h2>
+          <p className="text-gray-600 text-sm">
+            {loadingProgress < 100 ? 'Please wait while we load your products...' : 'Almost ready!'}
+          </p>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="relative">
+          <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-out"
+              style={{ width: `${loadingProgress}%` }}
+            >
+              <div className="h-full w-full bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+            </div>
+          </div>
+          
+          {/* Percentage */}
+          <div className="mt-3 flex justify-between items-center">
+            <span className="text-sm font-semibold text-blue-600">
+              {loadingProgress}%
+            </span>
+            <span className="text-xs text-gray-500">
+              {loadingProgress < 30 && '⏳ Starting...'}
+              {loadingProgress >= 30 && loadingProgress < 70 && '📦 Loading products...'}
+              {loadingProgress >= 70 && loadingProgress < 90 && '🔄 Processing...'}
+              {loadingProgress >= 90 && loadingProgress < 100 && '✨ Finalizing...'}
+              {loadingProgress === 100 && '✅ Complete!'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Info Text */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <p className="text-xs text-blue-600 text-center">
+            💡 <strong>First time?</strong> This might take a moment. Next time will be instant!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <Layout title="Point of Sale">
+      {/* Loading Overlay with Progress */}
+      {loadingProducts && <LoadingOverlay />}
+      
       {/* Sync Status Banner */}
       {syncStatus?.isSyncing && (
         <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded-r-lg">

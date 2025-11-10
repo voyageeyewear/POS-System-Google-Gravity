@@ -70,6 +70,16 @@ textarea {
   100% { transform: rotate(360deg); }
 }
 
+/* Shimmer animation for loading progress bar */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
 /* Fix POS product cards being cut off */
 .product-card-container {
   display: grid;
