@@ -139,6 +139,7 @@ export default function POS() {
       
       setLoadingMessage('Fetching inventory data...');
       console.log('📡 Fetching inventory for store ID:', storeId);
+      console.log('📡 User store name:', user.assignedStore?.name);
       
       const response = await storeAPI.getInventory(storeId);
       
@@ -149,6 +150,25 @@ export default function POS() {
       console.log('✅ Inventory response:', response.data);
       
       const inventory = response.data.inventory;
+      
+      // Check if inventory is empty
+      if (!inventory || inventory.length === 0) {
+        console.warn(`⚠️  No products found for store: ${user.assignedStore?.name} (ID: ${storeId})`);
+        console.warn(`💡 This means either:`);
+        console.warn(`   1. Inventory hasn't been synced from Shopify yet`);
+        console.warn(`   2. This store has no products with quantity > 0`);
+        console.warn(`   3. The Shopify sync failed`);
+        
+        clearInterval(progressInterval);
+        setLoadingProgress(0);
+        setLoadingProducts(false);
+        
+        toast.error(
+          `No products available for ${user.assignedStore?.name}. Please contact admin to sync inventory.`,
+          { duration: 5000 }
+        );
+        return;
+      }
       
       // Small delay to show processing message
       await new Promise(resolve => setTimeout(resolve, 300));
