@@ -50,7 +50,9 @@ AppDataSource.initialize()
     
     // Auto-seed database if no admin user exists
     const userRepo = AppDataSource.getRepository('User');
+    const storeRepo = AppDataSource.getRepository('Store');
     const adminCount = await userRepo.count({ where: { role: 'admin' } });
+    const storeCount = await storeRepo.count();
     
     if (adminCount === 0) {
       console.log('🌱 No admin user found, running auto-seed...');
@@ -67,6 +69,43 @@ AppDataSource.initialize()
       });
       await userRepo.save(admin);
       console.log('✅ Created admin user (admin@pos.com / admin123)');
+    }
+    
+    // Create demo stores if none exist
+    if (storeCount === 0) {
+      console.log('🏪 No stores found, creating demo stores...');
+      const demoStores = [
+        {
+          name: 'Delhi Store',
+          location: 'Delhi, India',
+          address: { street: 'Connaught Place', city: 'Delhi', state: 'Delhi', zipCode: '110001', country: 'India' },
+          phone: '+91-11-12345678',
+          email: 'delhi@voyageeyewear.com',
+          isActive: true
+        },
+        {
+          name: 'Mumbai Store',
+          location: 'Mumbai, India',
+          address: { street: 'Bandra West', city: 'Mumbai', state: 'Maharashtra', zipCode: '400050', country: 'India' },
+          phone: '+91-22-87654321',
+          email: 'mumbai@voyageeyewear.com',
+          isActive: true
+        },
+        {
+          name: 'Bangalore Store',
+          location: 'Bangalore, India',
+          address: { street: 'MG Road', city: 'Bangalore', state: 'Karnataka', zipCode: '560001', country: 'India' },
+          phone: '+91-80-98765432',
+          email: 'bangalore@voyageeyewear.com',
+          isActive: true
+        }
+      ];
+      
+      for (const storeData of demoStores) {
+        const store = storeRepo.create(storeData);
+        await storeRepo.save(store);
+      }
+      console.log(`✅ Created ${demoStores.length} demo stores`);
     }
   })
   .catch((error) => {
