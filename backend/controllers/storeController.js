@@ -89,24 +89,28 @@ exports.getStoreInventory = async (req, res) => {
       isActive: true
     });
 
-    // Filter inventory to show only the requested store
-    const inventoryData = products.map(product => {
-      const storeInventory = product.inventory.find(
-        inv => inv.store.toString() === storeId
-      );
-      
-      return {
-        _id: product._id,
-        name: product.name,
-        sku: product.sku,
-        category: product.category,
-        price: product.price,
-        taxRate: product.taxRate,
-        description: product.description,
-        image: product.image,
-        quantity: storeInventory ? storeInventory.quantity : 0
-      };
-    });
+    // Filter inventory to show only the requested store AND only products with quantity > 0
+    const inventoryData = products
+      .map(product => {
+        const storeInventory = product.inventory.find(
+          inv => inv.store.toString() === storeId
+        );
+        
+        return {
+          _id: product._id,
+          name: product.name,
+          sku: product.sku,
+          category: product.category,
+          price: product.price,
+          taxRate: product.taxRate,
+          description: product.description,
+          image: product.image,
+          quantity: storeInventory ? storeInventory.quantity : 0
+        };
+      })
+      .filter(item => item.quantity > 0); // Only return products with stock available
+
+    console.log(`📦 Store ${storeId}: Returning ${inventoryData.length} products with available stock`);
 
     res.json({ inventory: inventoryData });
   } catch (error) {

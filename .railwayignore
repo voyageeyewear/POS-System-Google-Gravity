@@ -1,0 +1,9 @@
+frontend/
+.git/
+.next/
+node_modules/
+*.md
+DEPLOYMENT.md
+QUICKSTART.md
+PROJECT_SUMMARY.md
+
