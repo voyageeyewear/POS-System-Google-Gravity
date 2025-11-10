@@ -53,7 +53,7 @@ let lastSyncTime = null;
 let isSyncing = false;
 
 // Background sync function
-const triggerBackgroundSync = async () => {
+const triggerBackgroundSync = async (forceSync = false) => {
   if (isSyncing) {
     console.log('⏭️ Sync already in progress, skipping...');
     return;
@@ -62,8 +62,8 @@ const triggerBackgroundSync = async () => {
   const now = Date.now();
   const ONE_HOUR = 60 * 60 * 1000;
   
-  // Only sync if last sync was more than 1 hour ago
-  if (lastSyncTime && (now - lastSyncTime) < ONE_HOUR) {
+  // Only sync if last sync was more than 1 hour ago (unless forced)
+  if (!forceSync && lastSyncTime && (now - lastSyncTime) < ONE_HOUR) {
     console.log(`⏭️ Skipping sync - last sync was ${Math.round((now - lastSyncTime) / 1000 / 60)} minutes ago`);
     return;
   }
@@ -85,7 +85,9 @@ const triggerBackgroundSync = async () => {
       status: (code) => ({
         json: (data) => {
           console.error('❌ Background sync failed:', data);
+          console.error('❌ Error details:', data);
           isSyncing = false;
+          return { json: () => {} };
         }
       })
     };
@@ -93,6 +95,7 @@ const triggerBackgroundSync = async () => {
     await dataManagementController.refreshData(mockReq, mockRes);
   } catch (error) {
     console.error('❌ Background sync error:', error);
+    console.error('❌ Stack trace:', error.stack);
     isSyncing = false;
   }
 };
@@ -131,9 +134,10 @@ exports.login = async (req, res) => {
     // Return user without password
     const userResponse = UserMethods.toJSON(user);
 
-    // Trigger background sync (non-blocking)
+    // Trigger background sync (non-blocking) - Force sync if never synced before
+    const shouldForceSync = !lastSyncTime;
     setImmediate(() => {
-      triggerBackgroundSync().catch(err => {
+      triggerBackgroundSync(shouldForceSync).catch(err => {
         console.error('Background sync trigger error:', err);
       });
     });
