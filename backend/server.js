@@ -71,41 +71,41 @@ AppDataSource.initialize()
       console.log('✅ Created admin user (admin@pos.com / admin123)');
     }
     
-    // Create demo stores if none exist
-    if (storeCount === 0) {
-      console.log('🏪 No stores found, creating demo stores...');
-      const demoStores = [
-        {
-          name: 'Delhi Store',
-          location: 'Delhi, India',
-          address: { street: 'Connaught Place', city: 'Delhi', state: 'Delhi', zipCode: '110001', country: 'India' },
-          phone: '+91-11-12345678',
-          email: 'delhi@voyageeyewear.com',
-          isActive: true
-        },
-        {
-          name: 'Mumbai Store',
-          location: 'Mumbai, India',
-          address: { street: 'Bandra West', city: 'Mumbai', state: 'Maharashtra', zipCode: '400050', country: 'India' },
-          phone: '+91-22-87654321',
-          email: 'mumbai@voyageeyewear.com',
-          isActive: true
-        },
-        {
-          name: 'Bangalore Store',
-          location: 'Bangalore, India',
-          address: { street: 'MG Road', city: 'Bangalore', state: 'Karnataka', zipCode: '560001', country: 'India' },
-          phone: '+91-80-98765432',
-          email: 'bangalore@voyageeyewear.com',
-          isActive: true
+    // Auto-sync stores from Shopify if none exist
+    if (storeCount === 0 && process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN) {
+      console.log('🏪 No stores found, syncing from Shopify...');
+      try {
+        const shopifyService = require('./utils/shopify');
+        const shopifyLocations = await shopifyService.getLocations();
+        
+        for (const location of shopifyLocations) {
+          const address = {
+            street: location.address1 || '',
+            city: location.city || '',
+            state: location.province || '',
+            zipCode: location.zip || '',
+            country: location.country || ''
+          };
+
+          const storeData = {
+            name: location.name,
+            location: `${location.city || 'Store'}, ${location.country || ''}`,
+            address,
+            phone: location.phone || '',
+            email: `${location.name.toLowerCase().replace(/\s+/g, '-')}@store.com`,
+            shopifyLocationId: location.id.toString(),
+            isActive: location.active
+          };
+
+          const store = storeRepo.create(storeData);
+          await storeRepo.save(store);
         }
-      ];
-      
-      for (const storeData of demoStores) {
-        const store = storeRepo.create(storeData);
-        await storeRepo.save(store);
+        
+        console.log(`✅ Synced ${shopifyLocations.length} stores from Shopify`);
+      } catch (error) {
+        console.error('❌ Failed to sync from Shopify:', error.message);
+        console.log('💡 You can manually sync stores from the admin panel');
       }
-      console.log(`✅ Created ${demoStores.length} demo stores`);
     }
   })
   .catch((error) => {
