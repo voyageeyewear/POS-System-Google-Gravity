@@ -43,10 +43,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize TypeORM
+// Initialize TypeORM and auto-seed if needed
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
     console.log('✅ PostgreSQL connected via TypeORM');
+    
+    // Auto-seed database if no admin user exists
+    const userRepo = AppDataSource.getRepository('User');
+    const adminCount = await userRepo.count({ where: { role: 'admin' } });
+    
+    if (adminCount === 0) {
+      console.log('🌱 No admin user found, running auto-seed...');
+      const { UserMethods } = require('./entities/User');
+      
+      // Create admin user
+      const adminPassword = await UserMethods.hashPassword('admin123');
+      const admin = userRepo.create({
+        name: 'Admin User',
+        email: 'admin@pos.com',
+        password: adminPassword,
+        role: 'admin',
+        isActive: true
+      });
+      await userRepo.save(admin);
+      console.log('✅ Created admin user (admin@pos.com / admin123)');
+    }
   })
   .catch((error) => {
     console.error('❌ TypeORM initialization error:', error);
