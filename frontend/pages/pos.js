@@ -786,8 +786,8 @@ export default function POS() {
 
           {/* PAGINATION - Clean and Compact */}
           {totalPages > 1 && (
-            <div className="mt-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="mt-4 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 {/* Page Info */}
                 <div className="text-sm text-gray-600">
                   Showing <span className="font-semibold text-gray-900">{startIndex + 1}-{Math.min(endIndex, filteredProducts.length)}</span> of <span className="font-semibold text-gray-900">{filteredProducts.length}</span> products
