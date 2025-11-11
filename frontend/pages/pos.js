@@ -195,14 +195,14 @@ export default function POS() {
 
   const toggleProductSelection = (product) => {
     // Check how many times this product has been selected
-    const selectedCount = selectedProducts.filter((p) => p.productId === product._id).length;
+    const selectedCount = selectedProducts.filter((p) => p.productId === product.id).length;
     
     // Always add as new instance (up to stock limit)
     if (product.quantity > selectedCount) {
       // Store as a selection object with unique ID and reference to original product
       const selection = {
-        selectionId: `${product._id}_${Date.now()}_${Math.random()}`, // Unique selection ID
-        productId: product._id, // Keep original MongoDB ID separate
+        selectionId: `${product.id}_${Date.now()}_${Math.random()}`, // Unique selection ID
+        productId: product.id, // PostgreSQL ID
         productData: product // Store full product data
       };
       setSelectedProducts([...selectedProducts, selection]);
@@ -216,7 +216,7 @@ export default function POS() {
 
   const removeProductSelection = (product) => {
     // Remove one instance of the product
-    const index = selectedProducts.findIndex((p) => p.productId === product._id);
+    const index = selectedProducts.findIndex((p) => p.productId === product.id);
     if (index > -1) {
       const newSelected = [...selectedProducts];
       newSelected.splice(index, 1);
@@ -676,10 +676,10 @@ export default function POS() {
           {/* Products Grid - Paginated view (50 per page) */}
           <div className="products-grid-mobile sm:grid sm:grid-cols-3 sm:gap-4">
             {paginatedProducts.map((product) => {
-              const selectionCount = selectedProducts.filter((p) => p.productId === product._id).length;
+              const selectionCount = selectedProducts.filter((p) => p.productId === product.id).length;
               return (
                 <ProductCard
-                  key={product._id}
+                  key={product.id}
                   product={product}
                   isSelected={selectionCount > 0}
                   selectionCount={selectionCount}

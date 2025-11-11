@@ -252,7 +252,7 @@ export default function SalesReports() {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <button
-                      onClick={() => downloadInvoice(sale._id, sale.invoiceNumber)}
+                      onClick={() => downloadInvoice(sale.id, sale.invoiceNumber)}
                       className="p-1 hover:bg-gray-100 rounded"
                       title="Download Invoice"
                     >
