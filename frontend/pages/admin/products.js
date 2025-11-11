@@ -35,16 +35,24 @@ export default function ProductsManagement() {
     }
   }, [user, loading, isAdmin, router]);
 
-  const loadData = async (page = 1) => {
+  const loadData = async (page = 1, overrideFilters = {}) => {
     try {
       setLoadingProducts(true);
+      
+      // Use override filters if provided, otherwise use state
+      const currentStoreFilter = overrideFilters.storeFilter !== undefined ? overrideFilters.storeFilter : storeFilter;
+      const currentCategoryFilter = overrideFilters.categoryFilter !== undefined ? overrideFilters.categoryFilter : categoryFilter;
+      const currentSearchTerm = overrideFilters.searchTerm !== undefined ? overrideFilters.searchTerm : searchTerm;
+      
       const params = {
         page,
         limit: 50,
-        ...(categoryFilter !== 'all' && { category: categoryFilter }),
-        ...(storeFilter !== 'all' && { storeId: storeFilter }),
-        ...(searchTerm && { search: searchTerm })
+        ...(currentCategoryFilter !== 'all' && { category: currentCategoryFilter }),
+        ...(currentStoreFilter !== 'all' && { storeId: currentStoreFilter }),
+        ...(currentSearchTerm && { search: currentSearchTerm })
       };
+      
+      console.log('🔍 Loading products with params:', params);
       
       const [productsRes, storesRes] = await Promise.all([
         productAPI.getAll(params),
@@ -237,11 +245,11 @@ export default function ProductsManagement() {
               <select
                 value={storeFilter}
                 onChange={(e) => {
-                  setStoreFilter(e.target.value);
-                  setTimeout(() => {
-                    setPagination({ ...pagination, page: 1 });
-                    loadData(1);
-                  }, 100);
+                  const newStoreFilter = e.target.value;
+                  console.log('🏪 Store filter changed to:', newStoreFilter);
+                  setStoreFilter(newStoreFilter);
+                  setPagination({ ...pagination, page: 1 });
+                  loadData(1, { storeFilter: newStoreFilter });
                 }}
                 className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none appearance-none bg-white font-medium text-gray-700 cursor-pointer"
               >
@@ -282,11 +290,10 @@ export default function ProductsManagement() {
               <button
                 key={category}
                 onClick={() => {
+                  console.log('📦 Category filter changed to:', category);
                   setCategoryFilter(category);
-                  setTimeout(() => {
-                    setPagination({ ...pagination, page: 1 });
-                    loadData(1);
-                  }, 100);
+                  setPagination({ ...pagination, page: 1 });
+                  loadData(1, { categoryFilter: category });
                 }}
                 className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
                   categoryFilter === category
