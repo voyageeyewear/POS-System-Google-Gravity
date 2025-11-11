@@ -407,6 +407,11 @@ exports.refreshData = async (req, res) => {
     
     // Fetch and create stores from Shopify
     const shopifyLocations = await shopifyService.getLocations();
+    console.log(`📍 Found ${shopifyLocations.length} locations in Shopify`);
+    shopifyLocations.forEach(loc => {
+      console.log(`  - ${loc.name} (ID: ${loc.id}, Active: ${loc.active})`);
+    });
+    
     const createdStores = [];
     
     for (const location of shopifyLocations) {
@@ -418,6 +423,8 @@ exports.refreshData = async (req, res) => {
         country: location.country || ''
       };
 
+      // 🔥 CRITICAL: Set ALL Shopify locations as active in POS, regardless of Shopify's active status
+      // This ensures we sync inventory from all locations
       const storeData = {
         name: location.name,
         location: `${location.city || 'Store'}, ${location.country || ''}`,
@@ -425,7 +432,7 @@ exports.refreshData = async (req, res) => {
         phone: location.phone || '',
         email: `${location.name.toLowerCase().replace(/\s+/g, '-')}@store.com`,
         shopifyLocationId: location.id.toString(),
-        isActive: location.active
+        isActive: true  // Always active in POS to capture all inventory
       };
 
       // 🔥 UPSERT: Find existing store or create new
@@ -436,11 +443,11 @@ exports.refreshData = async (req, res) => {
       if (store) {
         // Update existing store (preserves ID and user assignments!)
         Object.assign(store, storeData);
-        console.log(`📝 Updating store: ${store.name} (ID: ${store.id})`);
+        console.log(`📝 Updating store: ${store.name} (ID: ${store.id}, Shopify Active: ${location.active})`);
       } else {
         // Create new store
         store = storeRepo.create(storeData);
-        console.log(`✨ Creating new store: ${storeData.name}`);
+        console.log(`✨ Creating new store: ${storeData.name} (Shopify Active: ${location.active})`);
       }
 
       const savedStore = await storeRepo.save(store);
@@ -714,6 +721,22 @@ exports.refreshData = async (req, res) => {
       }
       
       console.log(`✅ Created ${createdZeroInventory} zero-quantity inventory records`);
+    }
+    
+    // 🔥 DIAGNOSTIC: Verify total inventory for sample products
+    console.log('🔍 DIAGNOSTIC: Verifying inventory totals...');
+    const sampleProducts = await productRepo.find({ 
+      take: 3,
+      relations: ['inventory', 'inventory.store']
+    });
+    
+    for (const product of sampleProducts) {
+      const dbTotal = product.inventory?.reduce((sum, inv) => sum + parseInt(inv.quantity || 0), 0) || 0;
+      const locationCount = product.inventory?.length || 0;
+      console.log(`📊 ${product.name}: ${dbTotal} units across ${locationCount} locations`);
+      product.inventory?.forEach(inv => {
+        console.log(`   - ${inv.store?.name}: ${inv.quantity} units`);
+      });
     }
     
     console.log(`🎉 Full sync completed successfully!`);
