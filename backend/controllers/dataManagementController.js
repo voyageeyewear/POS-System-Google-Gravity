@@ -506,6 +506,18 @@ exports.refreshData = async (req, res) => {
     
     console.log(`📦 Found ${products.length} products with inventory item IDs`);
     
+    // 🔥 DIAGNOSTIC: Show sample of products with inventory IDs
+    if (products.length > 0) {
+      const sample = products.slice(0, 3);
+      console.log('📋 Sample products with inventory IDs:', sample.map(p => ({
+        id: p.id,
+        name: p.name,
+        inventoryItemId: p.inventoryItemId
+      })));
+    } else {
+      console.error('❌ CRITICAL: No products have inventoryItemId! Sync will fail.');
+    }
+    
     // Get all inventory item IDs - USE STORED VALUES (AGGRESSIVE FIX!)
     const inventoryItemIds = [];
     const productMap = new Map();
@@ -518,12 +530,25 @@ exports.refreshData = async (req, res) => {
     }
     
     console.log(`📦 Collected ${inventoryItemIds.length} inventory item IDs for sync`);
+    console.log(`📋 First 5 inventory item IDs: ${inventoryItemIds.slice(0, 5).join(', ')}`);
 
     // Get inventory levels from Shopify
     if (inventoryItemIds.length > 0) {
       console.log(`🔄 Fetching inventory levels for ${inventoryItemIds.length} items from Shopify...`);
       const inventoryLevels = await shopifyService.getInventoryLevels(inventoryItemIds);
       console.log(`✅ Received ${inventoryLevels.length} inventory level records from Shopify`);
+
+      // 🔥 DIAGNOSTIC: Show sample inventory levels from Shopify
+      if (inventoryLevels.length > 0) {
+        const sample = inventoryLevels.slice(0, 5);
+        console.log('📋 Sample inventory levels from Shopify:', sample.map(l => ({
+          location_id: l.location_id,
+          inventory_item_id: l.inventory_item_id,
+          available: l.available
+        })));
+      } else {
+        console.error('❌ CRITICAL: Shopify returned 0 inventory levels!');
+      }
 
       // Create a map of location -> item -> quantity
       const inventoryMap = new Map();
@@ -539,9 +564,16 @@ exports.refreshData = async (req, res) => {
       }
       
       console.log(`📊 Organized inventory for ${inventoryMap.size} locations`);
+      
+      // 🔥 DIAGNOSTIC: Show what locations we have in the map
+      console.log('📋 Location IDs in inventory map:', Array.from(inventoryMap.keys()));
 
       // Update inventory for each store
+      console.log(`📦 Processing inventory for ${createdStores.length} stores...`);
+      console.log('📋 Store IDs we have:', createdStores.map(s => ({ name: s.name, shopifyLocationId: s.shopifyLocationId })));
+      
       for (const store of createdStores) {
+        console.log(`🔍 Looking for inventory for store: ${store.name} (Shopify Location ID: ${store.shopifyLocationId})`);
         const locationInventory = inventoryMap.get(store.shopifyLocationId);
         
         if (locationInventory) {
