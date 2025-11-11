@@ -61,14 +61,38 @@ export default function POS() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // 🔥 AUTO-SYNC: Periodic inventory refresh (every 5 minutes)
+  // 🔥 AUTO-SYNC: Real-time inventory refresh (every 2 minutes for more real-time data)
   useEffect(() => {
     if (!user || user.role !== 'cashier') return;
     
-    console.log('🔄 Setting up periodic auto-sync (every 5 minutes)...');
+    console.log('🔄 Setting up real-time auto-sync (every 2 minutes)...');
+    
+    // Initial sync on page load to get fresh data
+    const initialSync = async () => {
+      console.log('🔄 Initial sync on page load...');
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api'}/data-management/refresh`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          console.log('✅ Initial sync complete! Loading fresh products...');
+          frontendCache.clear();
+          await loadProducts();
+        }
+      } catch (error) {
+        console.error('Initial sync error:', error);
+      }
+    };
+    
+    initialSync(); // Run immediately on mount
     
     const autoSyncInterval = setInterval(async () => {
-      console.log('🔄 Periodic auto-sync triggered...');
+      console.log('🔄 Auto-sync: Fetching real-time inventory from Shopify...');
       
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api'}/data-management/refresh`, {
@@ -80,14 +104,15 @@ export default function POS() {
         });
         
         if (response.ok) {
-          console.log('✅ Periodic sync complete! Refreshing products...');
+          console.log('✅ Real-time sync complete! Refreshing products...');
           frontendCache.clear();
-          loadProducts();
+          await loadProducts();
+          toast.success('📊 Inventory synced from Shopify!', { duration: 2000 });
         }
       } catch (error) {
-        console.error('Periodic sync error:', error);
+        console.error('Auto-sync error:', error);
       }
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 2 * 60 * 1000); // Every 2 minutes for real-time data
     
     return () => clearInterval(autoSyncInterval);
   }, [user]);
@@ -606,18 +631,36 @@ export default function POS() {
                 />
               </div>
               <button
-                onClick={() => {
-                  toast.loading('Refreshing products...');
-                  loadProducts(true).then(() => {
-                    toast.dismiss();
-                    toast.success('Products refreshed!');
-                  });
+                onClick={async () => {
+                  const toastId = toast.loading('🔄 Syncing real-time inventory from Shopify...');
+                  try {
+                    // First sync from Shopify
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api'}/data-management/refresh`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                      }
+                    });
+                    
+                    if (response.ok) {
+                      // Clear cache and reload with fresh data
+                      frontendCache.clear();
+                      await loadProducts();
+                      toast.success('✅ Real-time inventory synced from Shopify!', { id: toastId });
+                    } else {
+                      toast.error('Failed to sync from Shopify', { id: toastId });
+                    }
+                  } catch (error) {
+                    console.error('Sync error:', error);
+                    toast.error('Failed to sync from Shopify', { id: toastId });
+                  }
                 }}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition flex items-center gap-2"
-                title="Refresh products"
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition flex items-center gap-2 font-medium shadow-md"
+                title="Sync real-time inventory from Shopify"
               >
                 <RefreshCw className="w-5 h-5" />
-                <span className="hidden sm:inline">Refresh</span>
+                <span className="hidden sm:inline">Sync Now</span>
               </button>
             </div>
 
