@@ -84,10 +84,30 @@ export default function SalesReports() {
       toast.success('Invoice downloaded');
     } catch (error) {
       console.error('❌ Invoice download error:', error);
+      console.error('Error response type:', typeof error.response?.data);
       console.error('Error response:', error.response?.data);
       
-      // Show detailed error message
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to download invoice';
+      // Handle blob error responses
+      let errorMsg = 'Failed to download invoice';
+      
+      if (error.response?.data instanceof Blob) {
+        console.log('📋 Reading blob error response...');
+        try {
+          const text = await error.response.data.text();
+          console.log('Blob content:', text);
+          const errorData = JSON.parse(text);
+          errorMsg = errorData.error || errorMsg;
+          console.error('Parsed error:', errorData);
+        } catch (blobError) {
+          console.error('Failed to parse blob:', blobError);
+          errorMsg = 'Server error (check Railway logs)';
+        }
+      } else if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       toast.error(errorMsg, { duration: 5000 });
     }
   };
