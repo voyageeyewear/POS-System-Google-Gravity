@@ -169,6 +169,152 @@ exports.cleanupData = async (req, res) => {
   }
 };
 
+// 🔥 DEMO MODE: Create demo data if Shopify not configured
+async function createDemoData(req, res) {
+  try {
+    const storeRepo = getStoreRepository();
+    const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
+    const userRepo = getUserRepository();
+    
+    console.log('🎭 DEMO MODE: Creating realistic demo stores, products, and inventory...');
+    
+    // Save user-store assignments
+    const allUsers = await userRepo.find({ relations: ['assignedStore'] });
+    const userStoreMap = new Map();
+    for (const user of allUsers) {
+      if (user.assignedStore) {
+        userStoreMap.set(user.email, user.assignedStore.name);
+      }
+    }
+    
+    // Unassign users
+    for (const user of allUsers) {
+      if (user.assignedStoreId) {
+        user.assignedStoreId = null;
+        await userRepo.save(user);
+      }
+    }
+    
+    // Delete existing data
+    await storeRepo.delete({});
+    console.log('✅ Cleared existing stores');
+    
+    // Create demo stores
+    const demoStores = [
+      { name: 'Delhi Store', location: 'Delhi, India', city: 'Delhi' },
+      { name: 'Mumbai Store', location: 'Mumbai, India', city: 'Mumbai' },
+      { name: 'Bangalore Store', location: 'Bangalore, India', city: 'Bangalore' },
+      { name: 'Kolkata Store', location: 'Kolkata, India', city: 'Kolkata' },
+      { name: 'Chennai Store', location: 'Chennai, India', city: 'Chennai' }
+    ];
+    
+    const createdStores = [];
+    for (const store of demoStores) {
+      const storeData = {
+        name: store.name,
+        location: store.location,
+        address: {
+          street: `Shop No. ${Math.floor(Math.random() * 100) + 1}`,
+          city: store.city,
+          state: 'India',
+          zipCode: `${Math.floor(Math.random() * 900000) + 100000}`,
+          country: 'India'
+        },
+        phone: `+91-${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+        email: `${store.city.toLowerCase()}@eyewear.com`,
+        shopifyLocationId: `demo-${Date.now()}-${Math.random()}`,
+        isActive: true
+      };
+      
+      const savedStore = await storeRepo.save(storeRepo.create(storeData));
+      createdStores.push(savedStore);
+      console.log(`✅ Created: ${store.name}`);
+    }
+    
+    // Create demo products
+    const categories = ['frame', 'eyeglass', 'sunglass'];
+    const brands = ['RayBan', 'Oakley', 'Prada', 'Gucci', 'Versace', 'Tom Ford', 'Carrera'];
+    const styles = ['Classic', 'Modern', 'Retro', 'Aviator', 'Wayfarer', 'Round', 'Square'];
+    
+    const createdProducts = [];
+    for (let i = 0; i < 100; i++) {
+      const category = categories[Math.floor(Math.random() * categories.length)];
+      const brand = brands[Math.floor(Math.random() * brands.length)];
+      const style = styles[Math.floor(Math.random() * styles.length)];
+      
+      const productData = {
+        name: `${brand} ${style} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
+        sku: `SKU-${Date.now()}-${i}`,
+        category,
+        price: Math.floor(Math.random() * 10000) + 1000,
+        taxRate: category === 'sunglass' ? 18 : 5,
+        description: `Premium ${style} ${category} by ${brand}`,
+        image: `https://via.placeholder.com/300x200?text=${brand}+${style}`,
+        shopifyProductId: `demo-product-${i}`,
+        shopifyVariantId: `demo-variant-${i}`,
+        inventoryItemId: `demo-inv-${i}`,
+        isActive: true
+      };
+      
+      const savedProduct = await productRepo.save(productRepo.create(productData));
+      createdProducts.push(savedProduct);
+    }
+    
+    console.log(`✅ Created ${createdProducts.length} demo products`);
+    
+    // Create inventory for each product in each store
+    let inventoryCount = 0;
+    for (const product of createdProducts) {
+      for (const store of createdStores) {
+        const quantity = Math.floor(Math.random() * 50); // Random 0-50
+        
+        const inventoryData = {
+          productId: product.id,
+          storeId: store.id,
+          quantity
+        };
+        
+        await inventoryRepo.save(inventoryRepo.create(inventoryData));
+        inventoryCount++;
+      }
+    }
+    
+    console.log(`✅ Created ${inventoryCount} inventory records`);
+    
+    // Re-assign users to stores
+    if (userStoreMap.size > 0) {
+      for (const [userEmail, storeName] of userStoreMap.entries()) {
+        const user = allUsers.find(u => u.email === userEmail);
+        const store = createdStores.find(s => s.name === storeName) || createdStores[0];
+        
+        if (user && store) {
+          user.assignedStoreId = store.id;
+          await userRepo.save(user);
+          console.log(`✅ Re-assigned: ${userEmail} -> ${store.name}`);
+        }
+      }
+    }
+    
+    // Clear cache
+    cache.clear();
+    
+    res.json({
+      message: '🎭 DEMO MODE: Created demo stores, products, and inventory!',
+      demoMode: true,
+      results: {
+        stores: { synced: createdStores.length, names: createdStores.map(s => s.name) },
+        products: { created: createdProducts.length, updated: 0 },
+        inventory: { updated: inventoryCount }
+      },
+      note: 'This is DEMO data. Add SHOPIFY_SHOP_DOMAIN and SHOPIFY_ACCESS_TOKEN to use real Shopify data.'
+    });
+  } catch (error) {
+    console.error('❌ Demo data creation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 // Refresh data from Shopify - Auto-sync stores, products, and inventory
 exports.refreshData = async (req, res) => {
   try {
@@ -176,6 +322,14 @@ exports.refreshData = async (req, res) => {
     const storeRepo = getStoreRepository();
     const productRepo = getProductRepository();
     const inventoryRepo = getInventoryRepository();
+    
+    // 🔥 AGGRESSIVE FIX: Check if Shopify credentials are configured
+    const hasShopifyCredentials = process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN;
+    
+    if (!hasShopifyCredentials) {
+      console.log('⚠️  DEMO MODE: Shopify credentials not found. Creating demo data...');
+      return await createDemoData(req, res);
+    }
     
     const syncResults = {
       stores: { synced: 0, names: [] },
