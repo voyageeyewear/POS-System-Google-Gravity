@@ -132,60 +132,84 @@ exports.syncInventoryFromShopify = async (req, res) => {
   }
 };
 
-// Get inventory summary
+// Get inventory summary (ENHANCED: Detailed kiosk-wise breakdown)
 exports.getInventorySummary = async (req, res) => {
   try {
+    const storeRepo = getStoreRepository();
     const productRepo = getProductRepository();
     const inventoryRepo = getInventoryRepository();
     
-    // Get all active products with their inventory
-    const products = await productRepo.find({
-      where: { isActive: true },
-      relations: ['inventory', 'inventory.store']
+    console.log('📊 Generating inventory summary...');
+    
+    // Get all stores
+    const stores = await storeRepo.find({ where: { isActive: true } });
+    
+    // Get all active products
+    const totalProducts = await productRepo.count({ where: { isActive: true } });
+    
+    // Get all inventory records
+    const allInventory = await inventoryRepo.find({
+      relations: ['product', 'store'],
+      where: { product: { isActive: true } }
     });
     
     const summary = {
-      totalProducts: products.length,
-      totalInventory: 0,
+      totalProducts,
+      totalStores: stores.length,
+      totalInventoryValue: 0,
+      grandTotalQuantity: 0,
       byStore: [],
-      lowStock: []
+      lowStock: [],
+      outOfStock: []
     };
 
-    // Calculate totals
-    const storeMap = new Map();
+    // Initialize store stats
+    for (const store of stores) {
+      storeMap.set(store.id, {
+        storeId: store.id,
+        storeName: store.name,
+        location: store.location,
+        totalProducts: 0,
+        productsWithStock: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0
+      });
+    }
     
-    for (const product of products) {
-      let productTotal = 0;
+    // Process all inventory records
+    for (const inv of allInventory) {
+      const storeId = inv.storeId;
+      const quantity = inv.quantity || 0;
+      const price = inv.product?.price || 0;
       
-      for (const inv of product.inventory || []) {
-        const quantity = inv.quantity || 0;
-        productTotal += quantity;
+      if (storeMap.has(storeId)) {
+        const storeStats = storeMap.get(storeId);
+        storeStats.totalProducts++;
+        storeStats.totalQuantity += quantity;
+        storeStats.totalValue += quantity * parseFloat(price);
+        summary.grandTotalQuantity += quantity;
+        summary.totalInventoryValue += quantity * parseFloat(price);
         
-        const storeId = inv.store.id;
-        if (!storeMap.has(storeId)) {
-          storeMap.set(storeId, {
-            store: inv.store.name,
-            quantity: 0
-          });
+        if (quantity > 0) {
+          storeStats.productsWithStock++;
+        } else {
+          storeStats.outOfStockItems++;
         }
-        storeMap.get(storeId).quantity += quantity;
-      }
-      
-      summary.totalInventory += productTotal;
-      
-      // Track low stock items (less than 5 units total)
-      if (productTotal < 5 && productTotal > 0) {
-        summary.lowStock.push({
-          name: product.name,
-          sku: product.sku,
-          quantity: productTotal
-        });
+        
+        if (quantity > 0 && quantity < 5) {
+          storeStats.lowStockItems++;
+        }
       }
     }
+    
+    summary.byStore = Array.from(storeMap.values()).sort((a, b) => 
+      b.totalQuantity - a.totalQuantity
+    );
 
-    summary.byStore = Array.from(storeMap.values());
-
-    res.json({ summary });
+    console.log(`✅ Summary generated: ${summary.totalStores} stores, ${summary.grandTotalQuantity} total items`);
+    res.json(summary);
   } catch (error) {
     console.error('Error in getInventorySummary:', error);
     res.status(400).json({ error: error.message });

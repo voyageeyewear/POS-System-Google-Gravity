@@ -13,7 +13,8 @@ import {
   Package,
   RefreshCw,
   Settings,
-  Database
+  Database,
+  BarChart3
 } from 'lucide-react';
 
 export default function AdminLayout({ children, title }) {
@@ -45,6 +46,12 @@ export default function AdminLayout({ children, title }) {
       href: '/admin/products',
       icon: Package,
       current: router.pathname === '/admin/products'
+    },
+    {
+      name: 'Inventory Summary',
+      href: '/admin/inventory-summary',
+      icon: BarChart3,
+      current: router.pathname === '/admin/inventory-summary'
     },
     {
       name: 'Sync Shopify',
