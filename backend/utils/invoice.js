@@ -285,6 +285,7 @@ class InvoiceGenerator {
           const cgst = taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
           const sgst = taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
           const igst = 0; // For same state, IGST is 0
+          const itemTotal = taxableAmount + cgst + sgst + igst; // Calculate instead of using item.totalAmount
           
           colX = margin;
           doc.text((index + 1).toString(), colX, itemY, { width: colWidths.sl, align: 'center' });
@@ -307,7 +308,7 @@ class InvoiceGenerator {
           colX += colWidths.sgst;
           doc.text(igst.toFixed(2), colX, itemY, { width: colWidths.igst, align: 'center' });
           colX += colWidths.igst;
-          doc.text(item.totalAmount.toFixed(2), colX, itemY, { width: colWidths.amount, align: 'center' });
+          doc.text(itemTotal.toFixed(2), colX, itemY, { width: colWidths.amount, align: 'center' });
           
           itemY += 20;
         });
