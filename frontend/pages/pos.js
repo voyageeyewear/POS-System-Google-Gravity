@@ -71,6 +71,8 @@ export default function POS() {
   };
 
   const loadProducts = async (forceRefresh = false) => {
+    let progressInterval = null;
+    
     try {
       setLoadingProducts(true);
       setLoadingProgress(0);
@@ -83,7 +85,9 @@ export default function POS() {
       const storeId = user.assignedStore?.id || user.assignedStore?._id;
       
       if (!storeId) {
-        toast.error('No store assigned to your account');
+        setLoadingProducts(false);
+        setLoadingProgress(0);
+        toast.error('❌ No store assigned to your account! Contact admin.', { duration: 5000 });
         console.error('❌ No store ID found for user:', user);
         return;
       }
@@ -93,7 +97,7 @@ export default function POS() {
       // Check frontend cache first (unless force refresh)
       if (!forceRefresh) {
         const cachedProducts = frontendCache.get(cacheKey);
-        if (cachedProducts) {
+        if (cachedProducts && cachedProducts.length > 0) {
           console.log('✅ Using cached products from localStorage');
           setLoadingMessage('Loading from cache...');
           setLoadingProgress(100);
@@ -137,8 +141,10 @@ export default function POS() {
       setLoadingMessage('Connecting to server...');
       setLoadingProgress(10);
       
+      console.log('🚀 Starting product fetch from API...');
+      
       // Simulate progress during API call
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
           if (prev < 80) {
             return prev + 5;
@@ -150,10 +156,13 @@ export default function POS() {
       setLoadingMessage('Fetching all products...');
       console.log('📡 Fetching ALL products with inventory for store ID:', storeId);
       console.log('📡 User store name:', user.assignedStore?.name);
+      console.log('📡 API URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/products`);
       
       const response = await productAPI.getAll({ page: 1, limit: 5000 });
       
       clearInterval(progressInterval);
+      progressInterval = null;
+      
       setLoadingProgress(90);
       setLoadingMessage('Processing products...');
       
@@ -177,13 +186,13 @@ export default function POS() {
         console.warn(`⚠️  No products found in the system!`);
         console.warn(`💡 This means the Shopify product sync hasn't been run yet`);
         
-        clearInterval(progressInterval);
         setLoadingProgress(0);
         setLoadingProducts(false);
+        setProducts([]); // Set empty array so UI can show emergency sync button
         
         toast.error(
-          `No products in system. Please contact admin to sync products from Shopify.`,
-          { duration: 5000 }
+          `No products in system. Please run Shopify sync first!`,
+          { duration: 8000 }
         );
         return;
       }
@@ -207,12 +216,38 @@ export default function POS() {
       toast.success(`✅ Loaded ${inventory.length} products`, { duration: 2000 });
       
     } catch (error) {
-      toast.error('Failed to load products');
-      console.error('❌ Error loading products:', error);
+      // AGGRESSIVE ERROR HANDLING
+      console.error('❌ CRITICAL ERROR loading products:', error);
+      console.error('❌ Error message:', error.message);
       console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error stack:', error.stack);
+      
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
+      // Show specific error message
+      let errorMsg = 'Failed to load products. ';
+      if (error.response?.status === 401) {
+        errorMsg += 'Please login again.';
+        setTimeout(() => router.push('/login'), 2000);
+      } else if (error.response?.status === 404) {
+        errorMsg += 'API endpoint not found. Contact support.';
+      } else if (error.message?.includes('Network')) {
+        errorMsg += 'Network error. Check your connection.';
+      } else {
+        errorMsg += 'Server error. Try refreshing the page.';
+      }
+      
+      toast.error(errorMsg, { duration: 8000 });
+      setProducts([]); // Set empty array so UI shows properly
+      
     } finally {
       setLoadingProducts(false);
       setLoadingProgress(0);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     }
   };
 
