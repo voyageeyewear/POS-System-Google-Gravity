@@ -27,17 +27,22 @@ exports.getAllProducts = async (req, res) => {
   try {
     const { category, search, page = 1, limit = 50, storeId } = req.query;
     const productRepo = getProductRepository();
+    const inventoryRepo = getInventoryRepository();
     
     // AGGRESSIVE FIX: Get user info from request
     const user = req.user;
     const isCashier = user && user.role === 'cashier';
     const userStoreId = user?.assignedStoreId;
     
+    // Determine which store to filter by
+    const filterStoreId = storeId ? parseInt(storeId) : (isCashier ? userStoreId : null);
+    
     console.log('📦 Getting products for user:', {
       role: user?.role,
       assignedStoreId: userStoreId,
       isCashier,
-      filterStoreId: storeId
+      requestStoreId: storeId,
+      filterStoreId
     });
     
     const pageNum = parseInt(page);
@@ -45,11 +50,15 @@ exports.getAllProducts = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     let queryBuilder = productRepo.createQueryBuilder('product')
+      .leftJoinAndSelect('product.inventory', 'inventory')
+      .leftJoinAndSelect('inventory.store', 'store')
       .where('product.isActive = :isActive', { isActive: true });
 
-    // CHANGED: Show ALL products to cashiers (not filtered by store)
-    // They will see inventory quantities from their assigned store only
-    console.log(`📦 Showing all products${isCashier ? ` with inventory for store ID: ${userStoreId}` : ''}`);
+    // Filter by store if specified
+    if (filterStoreId) {
+      queryBuilder.andWhere('inventory.storeId = :storeId', { storeId: filterStoreId });
+      console.log(`🏪 Filtering products by store ID: ${filterStoreId}`);
+    }
 
     if (category) {
       queryBuilder.andWhere('product.category = :category', { category });
@@ -62,14 +71,29 @@ exports.getAllProducts = async (req, res) => {
       );
     }
 
-    // Get total count
-    const total = await queryBuilder.getCount();
-    console.log(`📊 Found ${total} products for this user`);
+    // Get total count (need distinct because of inventory joins)
+    const totalQuery = productRepo.createQueryBuilder('product')
+      .leftJoin('product.inventory', 'inventory')
+      .where('product.isActive = :isActive', { isActive: true });
+    
+    if (filterStoreId) {
+      totalQuery.andWhere('inventory.storeId = :storeId', { storeId: filterStoreId });
+    }
+    if (category) {
+      totalQuery.andWhere('product.category = :category', { category });
+    }
+    if (search) {
+      totalQuery.andWhere(
+        '(LOWER(product.name) LIKE LOWER(:search) OR LOWER(product.sku) LIKE LOWER(:search))',
+        { search: `%${search}%` }
+      );
+    }
+    
+    const total = await totalQuery.getCount();
+    console.log(`📊 Found ${total} products matching filters`);
 
-    // Get paginated products with inventory
+    // Get paginated products
     const products = await queryBuilder
-      .leftJoinAndSelect('product.inventory', 'inventory')
-      .leftJoinAndSelect('inventory.store', 'store')
       .skip(skip)
       .take(limitNum)
       .orderBy('product.createdAt', 'DESC')
@@ -80,12 +104,8 @@ exports.getAllProducts = async (req, res) => {
       let inventoryToShow = product.inventory || [];
       
       // Filter inventory based on request
-      if (storeId) {
-        // Admin filtering by specific store
-        inventoryToShow = inventoryToShow.filter(inv => inv.storeId === parseInt(storeId));
-      } else if (isCashier && userStoreId) {
-        // Cashier sees only their store's inventory
-        inventoryToShow = inventoryToShow.filter(inv => inv.storeId === userStoreId);
+      if (filterStoreId) {
+        inventoryToShow = inventoryToShow.filter(inv => inv.storeId === filterStoreId);
       }
       
       return {
@@ -108,7 +128,6 @@ exports.getAllProducts = async (req, res) => {
     });
 
     console.log(`✅ Returning ${transformedProducts.length} products to ${user?.role || 'user'}`);
-    console.log(`📊 Sample product inventory:`, transformedProducts[0]?.inventory?.length || 0, 'store(s)');
 
     res.json({ 
       products: transformedProducts,
