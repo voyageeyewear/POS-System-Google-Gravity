@@ -268,29 +268,39 @@ exports.generateInvoice = async (req, res) => {
     const { saleId } = req.params;
     const saleRepo = getSaleRepository();
     
+    console.log(`📄 Generating invoice for sale ID: ${saleId}`);
+    
     const sale = await saleRepo.findOne({
       where: { id: parseInt(saleId) },
-      relations: ['store', 'customer', 'items']
+      relations: ['store', 'customer', 'items', 'items.product']  // ✅ Load product info
     });
 
     if (!sale) {
+      console.error(`❌ Sale not found: ${saleId}`);
       return res.status(404).json({ error: 'Sale not found' });
     }
 
+    console.log(`✅ Sale found: ${sale.invoiceNumber} with ${sale.items?.length || 0} items`);
+
     // Check access
     if (req.user.role === 'cashier' && 
+        req.user.assignedStore &&
         sale.storeId !== req.user.assignedStore.id) {
+      console.error(`❌ Access denied for cashier: ${req.user.email}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    console.log(`🔄 Generating PDF invoice...`);
     const filePath = await invoiceGenerator.generateInvoice(
       sale,
       sale.store,
       sale.customer
     );
 
+    console.log(`✅ Invoice generated: ${filePath}`);
     res.download(filePath, `${sale.invoiceNumber}.pdf`);
   } catch (error) {
+    console.error('❌ Invoice generation error:', error);
     res.status(400).json({ error: error.message });
   }
 };
