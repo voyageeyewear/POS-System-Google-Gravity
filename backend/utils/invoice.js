@@ -371,18 +371,15 @@ class InvoiceGenerator {
 
         // ===== TAX BREAKDOWN TABLE =====
         itemY += 55;
-        const taxColWidths = { hsn: 45, taxable: 70, cgstRate: 33, cgstAmt: 43, sgstRate: 33, sgstAmt: 43, igstRate: 33, igstAmt: 43, totalTax: 140 }; // Total: 560px
-        const totalTaxColumnStart = pageWidth - margin - taxColWidths.totalTax;
+        const taxColWidths = { hsn: 60, taxable: 90, cgstRate: 40, cgstAmt: 55, sgstRate: 40, sgstAmt: 55, igstRate: 40, igstAmt: 55, totalTax: 100 };
         
-        // Draw header box WITHOUT Total Tax area (so no lines through Total Tax)
-        doc.rect(margin, itemY, totalTaxColumnStart - margin, 25).fillAndStroke('#f0f0f0', '#000');
-        
-        // Draw Total Tax box separately (clean, no internal lines)
-        doc.rect(totalTaxColumnStart, itemY, taxColWidths.totalTax, 25).fillAndStroke('#f0f0f0', '#000');
+        // Draw full table box
+        const tableWidth = pageWidth - 2 * margin;
+        doc.rect(margin, itemY, tableWidth, 25).fillAndStroke('#f0f0f0', '#000');
         
         doc.font('Helvetica-Bold').fontSize(8).fillColor('#000');
         
-        // Draw vertical lines for tax columns (ONLY in the left section, not in Total Tax)
+        // Draw vertical lines
         let lineX = margin + taxColWidths.hsn;
         doc.moveTo(lineX, itemY).lineTo(lineX, itemY + 25).stroke();
         lineX += taxColWidths.taxable;
@@ -406,9 +403,9 @@ class InvoiceGenerator {
         lineX += taxColWidths.igstAmt;
         doc.moveTo(lineX, itemY).lineTo(lineX, itemY + 25).stroke();
         
-        // Draw horizontal line for second row - ONLY in the left section
+        // Draw horizontal line for second row
         doc.moveTo(margin + taxColWidths.hsn + taxColWidths.taxable, itemY + 12)
-           .lineTo(totalTaxColumnStart, itemY + 12).stroke();
+           .lineTo(pageWidth - margin, itemY + 12).stroke();
         
         colX = margin;
         doc.text('HSN/SAC', colX, itemY + 8, { width: taxColWidths.hsn, align: 'center' });
@@ -437,9 +434,9 @@ class InvoiceGenerator {
         doc.text('Amount', igstX + taxColWidths.igstRate, itemY + 14, { width: taxColWidths.igstAmt, align: 'center' });
         colX += taxColWidths.igstRate + taxColWidths.igstAmt;
         
-        // Total Tax header - Single line, clear and bold
+        // Total Tax header
         doc.font('Helvetica-Bold').fontSize(8);
-        doc.text('Total Tax', totalTaxColumnStart, itemY + 8, { width: taxColWidths.totalTax, align: 'center' });
+        doc.text('Total Tax', colX, itemY + 8, { width: taxColWidths.totalTax, align: 'center' });
 
         itemY += 25;
         doc.font('Helvetica').fontSize(8);
