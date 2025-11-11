@@ -58,28 +58,42 @@ export default function POS() {
     }
   }, [user, loading, router]);
 
-  // 🔥 ULTRA AGGRESSIVE: Auto-sync if no products found
+  // 🔥🔥🔥 ULTRA AGGRESSIVE: Auto-sync if no products found (WORKS WITHOUT STORE ASSIGNMENT!)
   useEffect(() => {
-    if (!user || !user.assignedStore || backgroundLoading) return;
+    if (!user || backgroundLoading) return;
+    
+    console.log('🔍 AUTO-SYNC CHECK:', {
+      hasUser: !!user,
+      hasStore: !!user.assignedStore,
+      productsCount: products.length,
+      backgroundLoading
+    });
     
     // Only trigger auto-sync once
     const hasTriedAutoSync = sessionStorage.getItem('autoSyncAttempted');
     
+    // MEGA AGGRESSIVE: Trigger even without store assignment!
     if (products.length === 0 && !hasTriedAutoSync) {
-      console.log('⚡ AUTO-SYNC TRIGGERED: No products found, syncing automatically...');
+      console.log('⚡⚡⚡ AUTO-SYNC TRIGGERED: No products found, syncing automatically...');
+      console.log('🎭 DEMO MODE: Will create stores, products, and auto-assign user to first store!');
       sessionStorage.setItem('autoSyncAttempted', 'true');
       
       toast.loading('🔥 AUTO-SYNC: Creating demo data automatically...', { id: 'auto-sync', duration: 15000 });
       
       setTimeout(async () => {
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api'}/data-management/refresh`, {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api';
+          console.log('📡 Calling API:', `${apiUrl}/data-management/refresh`);
+          
+          const response = await fetch(`${apiUrl}/data-management/refresh`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
               'Content-Type': 'application/json'
             }
           });
+          
+          console.log('📡 Response status:', response.status);
           
           if (response.ok) {
             const data = await response.json();
@@ -90,14 +104,14 @@ export default function POS() {
               window.location.reload();
             }, 2000);
           } else {
-            const error = await response.json();
-            console.error('❌ AUTO-SYNC FAILED:', error);
-            toast.error('❌ Auto-sync failed. Use manual sync button.', { id: 'auto-sync' });
+            const errorText = await response.text();
+            console.error('❌ AUTO-SYNC FAILED:', response.status, errorText);
+            toast.error(`❌ Auto-sync failed (${response.status}). Scroll down and use manual sync button.`, { id: 'auto-sync', duration: 10000 });
             sessionStorage.removeItem('autoSyncAttempted');
           }
         } catch (error) {
           console.error('❌ AUTO-SYNC ERROR:', error);
-          toast.error('❌ Auto-sync error. Use manual sync button.', { id: 'auto-sync' });
+          toast.error('❌ Network error. Scroll down and click manual sync button.', { id: 'auto-sync', duration: 10000 });
           sessionStorage.removeItem('autoSyncAttempted');
         }
       }, 3000); // Wait 3 seconds to ensure everything is loaded

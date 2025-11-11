@@ -283,6 +283,7 @@ async function createDemoData(req, res) {
     console.log(`✅ Created ${inventoryCount} inventory records`);
     
     // Re-assign users to stores
+    let assignedCount = 0;
     if (userStoreMap.size > 0) {
       for (const [userEmail, storeName] of userStoreMap.entries()) {
         const user = allUsers.find(u => u.email === userEmail);
@@ -291,10 +292,25 @@ async function createDemoData(req, res) {
         if (user && store) {
           user.assignedStoreId = store.id;
           await userRepo.save(user);
+          assignedCount++;
           console.log(`✅ Re-assigned: ${userEmail} -> ${store.name}`);
         }
       }
     }
+    
+    // 🔥 AGGRESSIVE: Auto-assign ANY cashier without a store to the first store!
+    const unassignedCashiers = allUsers.filter(u => u.role === 'cashier' && !u.assignedStoreId);
+    if (unassignedCashiers.length > 0 && createdStores.length > 0) {
+      console.log(`🔥 AUTO-ASSIGNING ${unassignedCashiers.length} unassigned cashiers to ${createdStores[0].name}...`);
+      for (const cashier of unassignedCashiers) {
+        cashier.assignedStoreId = createdStores[0].id;
+        await userRepo.save(cashier);
+        assignedCount++;
+        console.log(`✅ Auto-assigned: ${cashier.email} -> ${createdStores[0].name}`);
+      }
+    }
+    
+    console.log(`✅ Total users assigned to stores: ${assignedCount}`);
     
     // Clear cache
     cache.clear();
