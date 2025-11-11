@@ -262,23 +262,29 @@ class InvoiceGenerator {
         doc.font('Helvetica').fontSize(8);
         
         sale.items.forEach((item, index) => {
-          const taxableAmount = (item.unitPrice - item.discount) * item.quantity;
-          const cgst = item.taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
-          const sgst = item.taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
+          // 🔥 FIX: Convert PostgreSQL strings to numbers
+          const unitPrice = parseFloat(item.unitPrice || 0);
+          const discount = parseFloat(item.discount || 0);
+          const quantity = parseInt(item.quantity || 1);
+          const taxRate = parseFloat(item.taxRate || 5);
+          
+          const taxableAmount = (unitPrice - discount) * quantity;
+          const cgst = taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
+          const sgst = taxRate > 5 ? taxableAmount * 0.09 : taxableAmount * 0.025;
           const igst = 0; // For same state, IGST is 0
           
           colX = margin;
           doc.text((index + 1).toString(), colX, itemY, { width: colWidths.sl, align: 'center' });
           colX += colWidths.sl;
-          doc.text(item.name, colX, itemY, { width: colWidths.description, align: 'center' });
+          doc.text(item.name || 'Product', colX, itemY, { width: colWidths.description, align: 'center' });
           colX += colWidths.description;
           doc.text('90031900', colX, itemY, { width: colWidths.hsn, align: 'center' });
           colX += colWidths.hsn;
-          doc.text(item.quantity.toString(), colX, itemY, { width: colWidths.qty, align: 'center' });
+          doc.text(quantity.toString(), colX, itemY, { width: colWidths.qty, align: 'center' });
           colX += colWidths.qty;
-          doc.text(item.unitPrice.toFixed(2), colX, itemY, { width: colWidths.unitPrice, align: 'center' });
+          doc.text(unitPrice.toFixed(2), colX, itemY, { width: colWidths.unitPrice, align: 'center' });
           colX += colWidths.unitPrice;
-          doc.text(item.discount.toFixed(2), colX, itemY, { width: colWidths.discount, align: 'center' });
+          doc.text(discount.toFixed(2), colX, itemY, { width: colWidths.discount, align: 'center' });
           colX += colWidths.discount;
           doc.text(taxableAmount.toFixed(2), colX, itemY, { width: colWidths.taxable, align: 'center' });
           colX += colWidths.taxable;
@@ -297,38 +303,44 @@ class InvoiceGenerator {
         doc.rect(margin, itemY, pageWidth - 2 * margin, 20).stroke();
         doc.font('Helvetica-Bold');
         
+        // 🔥 FIX: Convert PostgreSQL strings to numbers
+        const subtotal = parseFloat(sale.subtotal || 0);
+        const totalDiscount = parseFloat(sale.totalDiscount || 0);
+        const totalTax = parseFloat(sale.totalTax || 0);
+        const totalAmount = parseFloat(sale.totalAmount || 0);
+        
         colX = margin;
         doc.text('Total', colX, itemY + 5, { width: colWidths.sl + colWidths.description + colWidths.hsn, align: 'center' });
         colX += colWidths.sl + colWidths.description + colWidths.hsn;
-        doc.text(sale.items.reduce((sum, item) => sum + item.quantity, 0).toString(), colX, itemY + 5, { width: colWidths.qty, align: 'center' });
+        doc.text(sale.items.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0).toString(), colX, itemY + 5, { width: colWidths.qty, align: 'center' });
         colX += colWidths.qty;
-        doc.text(sale.subtotal.toFixed(2), colX, itemY + 5, { width: colWidths.unitPrice, align: 'center' });
+        doc.text(subtotal.toFixed(2), colX, itemY + 5, { width: colWidths.unitPrice, align: 'center' });
         colX += colWidths.unitPrice;
-        doc.text(sale.totalDiscount.toFixed(2), colX, itemY + 5, { width: colWidths.discount, align: 'center' });
+        doc.text(totalDiscount.toFixed(2), colX, itemY + 5, { width: colWidths.discount, align: 'center' });
         colX += colWidths.discount;
-        doc.text((sale.subtotal - sale.totalDiscount).toFixed(2), colX, itemY + 5, { width: colWidths.taxable, align: 'center' });
+        doc.text((subtotal - totalDiscount).toFixed(2), colX, itemY + 5, { width: colWidths.taxable, align: 'center' });
         colX += colWidths.taxable;
-        doc.text((sale.totalTax / 2).toFixed(2), colX, itemY + 5, { width: colWidths.cgst, align: 'center' });
+        doc.text((totalTax / 2).toFixed(2), colX, itemY + 5, { width: colWidths.cgst, align: 'center' });
         colX += colWidths.cgst;
-        doc.text((sale.totalTax / 2).toFixed(2), colX, itemY + 5, { width: colWidths.sgst, align: 'center' });
+        doc.text((totalTax / 2).toFixed(2), colX, itemY + 5, { width: colWidths.sgst, align: 'center' });
         colX += colWidths.sgst;
         doc.text('0.00', colX, itemY + 5, { width: colWidths.igst, align: 'center' });
         colX += colWidths.igst;
-        doc.text(sale.totalAmount.toFixed(2), colX, itemY + 5, { width: colWidths.amount, align: 'center' });
+        doc.text(totalAmount.toFixed(2), colX, itemY + 5, { width: colWidths.amount, align: 'center' });
 
         // Grand Total
         itemY += 20;
         doc.rect(margin, itemY, pageWidth - 2 * margin, 20).fillAndStroke('#f0f0f0', '#000');
         doc.fillColor('#000').font('Helvetica-Bold').fontSize(10);
         doc.text('Grand Total', margin, itemY + 5, { width: pageWidth - 2 * margin - colWidths.amount - 10, align: 'center' });
-        doc.text(sale.totalAmount.toFixed(2), pageWidth - margin - colWidths.amount, itemY + 5, { width: colWidths.amount, align: 'center' });
+        doc.text(totalAmount.toFixed(2), pageWidth - margin - colWidths.amount, itemY + 5, { width: colWidths.amount, align: 'center' });
 
         // Amount in Words
         itemY += 30;
         doc.font('Helvetica-Bold').fontSize(9);
         doc.text('Amount Chargeable (in words):', margin, itemY);
         doc.font('Helvetica');
-        doc.text(amountInWords(sale.totalAmount), margin, itemY + 15, { width: pageWidth - 2 * margin });
+        doc.text(amountInWords(totalAmount), margin, itemY + 15, { width: pageWidth - 2 * margin });
 
         // ===== TAX BREAKDOWN TABLE =====
         itemY += 55;
@@ -404,12 +416,12 @@ class InvoiceGenerator {
 
         itemY += 25;
         doc.font('Helvetica').fontSize(8);
-        const taxableValue = sale.subtotal - sale.totalDiscount;
-        const taxRate = sale.items[0]?.taxRate || 5;
+        const taxableValue = subtotal - totalDiscount;
+        const taxRate = parseFloat(sale.items[0]?.taxRate || 5);
         const cgstRate = taxRate / 2;
         const sgstRate = taxRate / 2;
-        const cgstAmount = sale.totalTax / 2;
-        const sgstAmount = sale.totalTax / 2;
+        const cgstAmount = totalTax / 2;
+        const sgstAmount = totalTax / 2;
         
         colX = margin;
         doc.text('90031900', colX, itemY + 3, { width: taxColWidths.hsn, align: 'center' });
@@ -425,7 +437,7 @@ class InvoiceGenerator {
         doc.text('0%', colX, itemY + 3, { width: taxColWidths.igstRate, align: 'center' });
         doc.text('0.00', colX + taxColWidths.igstRate, itemY + 3, { width: taxColWidths.igstAmt, align: 'center' });
         colX += taxColWidths.igstRate + taxColWidths.igstAmt;
-        doc.text(sale.totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
+        doc.text(totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
 
         itemY += 20;
         doc.rect(margin, itemY, pageWidth - 2 * margin, 15).stroke();
@@ -442,14 +454,14 @@ class InvoiceGenerator {
         colX += taxColWidths.sgstAmt + taxColWidths.igstRate;
         doc.text('0.00', colX, itemY + 3, { width: taxColWidths.igstAmt, align: 'center' });
         colX += taxColWidths.igstAmt;
-        doc.text(sale.totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
+        doc.text(totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
 
         // Tax Amount in Words
         itemY += 25;
         doc.font('Helvetica-Bold').fontSize(9);
         doc.text('Tax Amount (in words):', margin, itemY);
         doc.font('Helvetica');
-        doc.text(amountInWords(sale.totalTax), margin, itemY + 12);
+        doc.text(amountInWords(totalTax), margin, itemY + 12);
 
         // ===== FOOTER =====
         itemY += 50;
