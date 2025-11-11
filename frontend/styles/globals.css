@@ -109,7 +109,7 @@ textarea {
     grid-template-columns: repeat(2, 1fr) !important;
     grid-auto-rows: auto !important;
     gap: 12px !important;
-    padding-bottom: 80px !important;
+    padding-bottom: 20px !important;
   }
   
   .products-grid-mobile > * {
