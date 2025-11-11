@@ -401,54 +401,9 @@ exports.refreshData = async (req, res) => {
     // STEP 1: Sync Stores
     console.log('🔄 Step 1/3: Syncing stores from Shopify...');
     
-    // First, save user-store assignments before unassigning
-    const userRepo = getUserRepository();
-    const allUsers = await userRepo.find({ relations: ['assignedStore'] });
-    const userStoreMap = new Map(); // email -> store name mapping
-    
-    for (const user of allUsers) {
-      if (user.assignedStore) {
-        userStoreMap.set(user.email, user.assignedStore.name);
-        console.log(`💾 Saved: ${user.email} -> ${user.assignedStore.name}`);
-      }
-    }
-    
-    // Unassign all users from stores to avoid foreign key constraint errors
-    let unassignedCount = 0;
-    for (const user of allUsers) {
-      if (user.assignedStoreId) {
-        user.assignedStoreId = null;
-        await userRepo.save(user);
-        unassignedCount++;
-      }
-    }
-    if (unassignedCount > 0) {
-      console.log(`✅ Unassigned ${unassignedCount} users from stores`);
-    }
-    
-    // 🔥 CRITICAL FIX: Delete in correct order to avoid FK constraint errors
-    // Order: Inventory → Products → Stores
-    
-    // 1. Delete ALL inventory first
-    const allInventory = await inventoryRepo.find();
-    if (allInventory.length > 0) {
-      await inventoryRepo.remove(allInventory);
-      console.log(`✅ Deleted ${allInventory.length} inventory records`);
-    }
-    
-    // 2. Delete ALL products
-    const allProducts = await productRepo.find();
-    if (allProducts.length > 0) {
-      await productRepo.remove(allProducts);
-      console.log(`✅ Deleted ${allProducts.length} products`);
-    }
-    
-    // 3. NOW delete stores
-    const allStores = await storeRepo.find();
-    if (allStores.length > 0) {
-      await storeRepo.remove(allStores);
-      console.log(`✅ Deleted ${allStores.length} stores`);
-    }
+    // 🔥 NEW APPROACH: UPSERT stores (update if exists, create if not)
+    // This preserves database IDs and user-store assignments!
+    console.log('✅ Using UPSERT strategy - no data loss!');
     
     // Fetch and create stores from Shopify
     const shopifyLocations = await shopifyService.getLocations();
@@ -473,36 +428,30 @@ exports.refreshData = async (req, res) => {
         isActive: location.active
       };
 
-      const store = storeRepo.create(storeData);
+      // 🔥 UPSERT: Find existing store or create new
+      let store = await storeRepo.findOne({ 
+        where: { shopifyLocationId: location.id.toString() } 
+      });
+
+      if (store) {
+        // Update existing store (preserves ID and user assignments!)
+        Object.assign(store, storeData);
+        console.log(`📝 Updating store: ${store.name} (ID: ${store.id})`);
+      } else {
+        // Create new store
+        store = storeRepo.create(storeData);
+        console.log(`✨ Creating new store: ${storeData.name}`);
+      }
+
       const savedStore = await storeRepo.save(store);
       createdStores.push(savedStore);
       syncResults.stores.names.push(location.name);
     }
     
     syncResults.stores.synced = shopifyLocations.length;
-    console.log(`✅ Step 1/3 Complete: Synced ${syncResults.stores.synced} stores`);
+    console.log(`✅ Step 1/3 Complete: Synced ${syncResults.stores.synced} stores (user assignments preserved!)`);
     
-    // Re-assign users to their stores based on saved mapping
-    if (userStoreMap.size > 0) {
-      console.log('🔄 Re-assigning users to stores...');
-      let reassignedCount = 0;
-      
-      for (const [userEmail, storeName] of userStoreMap.entries()) {
-        const user = allUsers.find(u => u.email === userEmail);
-        const store = createdStores.find(s => s.name === storeName);
-        
-        if (user && store) {
-          user.assignedStoreId = store.id;
-          await userRepo.save(user);
-          reassignedCount++;
-          console.log(`✅ Re-assigned: ${userEmail} -> ${storeName} (ID: ${store.id})`);
-        } else {
-          console.log(`⚠️  Could not re-assign ${userEmail} to ${storeName}`);
-        }
-      }
-      
-      console.log(`✅ Re-assigned ${reassignedCount} users to stores`);
-    }
+    // ✅ No need to re-assign users - store IDs are preserved with UPSERT!
     
     // STEP 2: Sync Products
     console.log('🔄 Step 2/3: Syncing products from Shopify...');
