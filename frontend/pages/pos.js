@@ -32,12 +32,13 @@ export default function POS() {
   const ITEMS_PER_PAGE = 50; // AGGRESSIVE: Show 50 products per page
   const LOADING_TIMEOUT_MS = 15000; // 15 seconds max loading time
 
-  // VERSION CHECK - v6.0 - NUCLEAR FIX: NO BLOCKING LOADER!
+  // VERSION CHECK - v7.0 - ULTRA AGGRESSIVE: AUTO-SYNC!
   useEffect(() => {
-    console.log('%c🔥 POS VERSION 6.0 - NUCLEAR FIX: NO BLOCKING LOADER!', 'background: #ff0000; color: #fff; font-size: 24px; padding: 10px; font-weight: bold;');
-    console.log('💥 NUCLEAR: Page shows IMMEDIATELY, products load in background');
-    console.log('⚡ NO MORE STUCK LOADING SCREENS!');
-    console.log('📊 Emergency sync button ALWAYS visible if no products');
+    console.log('%c🔥🔥🔥 POS VERSION 7.0 - ULTRA AGGRESSIVE: AUTO-SYNC!', 'background: #ff0000; color: #fff; font-size: 24px; padding: 10px; font-weight: bold;');
+    console.log('💥 ULTRA NUCLEAR: Page shows IMMEDIATELY');
+    console.log('⚡ AUTO-SYNC: Automatically creates demo data if none found!');
+    console.log('🎭 NO USER ACTION NEEDED - System fixes itself!');
+    console.log('📊 Demo mode activates automatically!');
   }, []);
 
   useEffect(() => {
@@ -56,6 +57,52 @@ export default function POS() {
       checkSyncStatus();
     }
   }, [user, loading, router]);
+
+  // 🔥 ULTRA AGGRESSIVE: Auto-sync if no products found
+  useEffect(() => {
+    if (!user || !user.assignedStore || backgroundLoading) return;
+    
+    // Only trigger auto-sync once
+    const hasTriedAutoSync = sessionStorage.getItem('autoSyncAttempted');
+    
+    if (products.length === 0 && !hasTriedAutoSync) {
+      console.log('⚡ AUTO-SYNC TRIGGERED: No products found, syncing automatically...');
+      sessionStorage.setItem('autoSyncAttempted', 'true');
+      
+      toast.loading('🔥 AUTO-SYNC: Creating demo data automatically...', { id: 'auto-sync', duration: 15000 });
+      
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pos-system-final-nov-2025-production.up.railway.app/api'}/data-management/refresh`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ AUTO-SYNC SUCCESS:', data);
+            toast.success('✅ Demo data created! Reloading...', { id: 'auto-sync', duration: 3000 });
+            setTimeout(() => {
+              sessionStorage.removeItem('autoSyncAttempted');
+              window.location.reload();
+            }, 2000);
+          } else {
+            const error = await response.json();
+            console.error('❌ AUTO-SYNC FAILED:', error);
+            toast.error('❌ Auto-sync failed. Use manual sync button.', { id: 'auto-sync' });
+            sessionStorage.removeItem('autoSyncAttempted');
+          }
+        } catch (error) {
+          console.error('❌ AUTO-SYNC ERROR:', error);
+          toast.error('❌ Auto-sync error. Use manual sync button.', { id: 'auto-sync' });
+          sessionStorage.removeItem('autoSyncAttempted');
+        }
+      }, 3000); // Wait 3 seconds to ensure everything is loaded
+    }
+  }, [products, backgroundLoading, user]);
 
   // Check sync status periodically
   useEffect(() => {
