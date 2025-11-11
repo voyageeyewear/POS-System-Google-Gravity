@@ -748,27 +748,55 @@ exports.completeSetup = async (req, res) => {
     
     console.log('📊 Current state:', { storeCount, productCount });
     
-    // Step 2: Create demo data if needed
+    // Step 2: Sync from Shopify if needed
     if (storeCount === 0 || productCount === 0) {
-      console.log('🎭 No data found, creating demo data...');
+      console.log('📦 No data found, syncing from Shopify...');
       
-      // Call createDemoData function directly (internal call, not via req/res)
-      const tempRes = {
-        json: (data) => {
-          console.log('✅ Demo data created:', data);
-          return data;
-        },
-        status: (code) => ({
+      // Check if Shopify credentials are configured
+      const hasShopifyCredentials = process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN;
+      
+      if (hasShopifyCredentials) {
+        console.log('✅ Shopify credentials found, syncing real data...');
+        
+        // Call refreshData to sync from Shopify (internal call)
+        const tempRes = {
           json: (data) => {
-            console.error('❌ Demo data error:', data);
-            throw new Error(data.error || 'Demo data creation failed');
-          }
-        })
-      };
-      
-      await createDemoData(req, tempRes);
-      
-      console.log('✅ Demo data creation completed');
+            console.log('✅ Shopify sync completed:', data);
+            return data;
+          },
+          status: (code) => ({
+            json: (data) => {
+              console.error('❌ Shopify sync error:', data);
+              throw new Error(data.error || 'Shopify sync failed');
+            }
+          })
+        };
+        
+        // Use the module's exports to call refreshData
+        await exports.refreshData(req, tempRes);
+        
+        console.log('✅ Shopify data sync completed');
+      } else {
+        console.log('⚠️  No Shopify credentials, using demo data...');
+        
+        // Fallback to demo data
+        const tempRes = {
+          json: (data) => {
+            console.log('✅ Demo data created:', data);
+            return data;
+          },
+          status: (code) => ({
+            json: (data) => {
+              console.error('❌ Demo data error:', data);
+              throw new Error(data.error || 'Demo data creation failed');
+            }
+          })
+        };
+        
+        await createDemoData(req, tempRes);
+        
+        console.log('✅ Demo data creation completed');
+      }
     } else {
       console.log('✅ Data already exists');
     }
