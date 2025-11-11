@@ -78,15 +78,6 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Demo Credentials:</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <p><strong>Admin:</strong> admin@pos.com / admin123</p>
-            <p><strong>Cashier:</strong> john@pos.com / cashier123</p>
-          </div>
-        </div>
       </div>
     </div>
   );
