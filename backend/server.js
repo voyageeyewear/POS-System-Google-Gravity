@@ -153,6 +153,24 @@ app.options('/api/auth/login', (req, res) => {
   res.status(200).end();
 });
 
+// 🚀 Root route - Health check
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'POS System API',
+    status: 'running',
+    version: '8.0 - Progressive Loading',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products',
+      stores: '/api/stores',
+      sales: '/api/sales',
+      inventory: '/api/inventory',
+      dataManagement: '/api/data-management'
+    }
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   console.log('❌ 404 - Route not found:', req.method, req.path);
