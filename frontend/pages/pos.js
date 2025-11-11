@@ -23,24 +23,20 @@ export default function POS() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [processing, setProcessing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [backgroundLoading, setBackgroundLoading] = useState(false); // NEW: Progressive background loading
-  const [bgLoadingPercent, setBgLoadingPercent] = useState(0); // NEW: Background loading percentage
-  const [totalProductCount, setTotalProductCount] = useState(0); // NEW: Total products in DB
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
+  const [bgLoadingPercent, setBgLoadingPercent] = useState(0);
+  const [totalProductCount, setTotalProductCount] = useState(0);
   const ITEMS_PER_PAGE = 50; // Show 50 products per page
-  const INITIAL_LOAD_SIZE = 50; // Load first 50 products immediately
   const LOADING_TIMEOUT_MS = 15000;
 
-  // VERSION CHECK - v8.0 - PROGRESSIVE LOADING!
+  // VERSION CHECK - v8.0 - PROGRESSIVE LOADING WITH PAGINATION!
   useEffect(() => {
     console.log('%c🚀 POS VERSION 8.0 - PROGRESSIVE LOADING!', 'background: #0066ff; color: #fff; font-size: 24px; padding: 10px; font-weight: bold;');
     console.log('⚡ First 50 products in 5 seconds!');
     console.log('📊 Remaining products load in background!');
-    console.log('📈 Progress bar shows loading status!');
+    console.log('📄 Pagination: 50 products per page!');
     console.log('🎯 Zero wait time for cashier!');
   }, []);
 
@@ -418,7 +414,7 @@ export default function POS() {
     return matchesSearch && matchesCategory;
   });
 
-  // Pagination logic
+  // Pagination logic - 50 products per page
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -718,7 +714,7 @@ export default function POS() {
             </div>
           )}
 
-          {/* Products Grid - NUCLEAR: Always show, no blocking loader */}
+          {/* Products Grid - Paginated view (50 per page) */}
           <div className="products-grid-mobile sm:grid sm:grid-cols-3 sm:gap-4">
             {paginatedProducts.map((product) => {
               const selectionCount = selectedProducts.filter((p) => p.productId === product._id).length;
