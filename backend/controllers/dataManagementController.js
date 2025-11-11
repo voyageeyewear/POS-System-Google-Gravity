@@ -202,17 +202,43 @@ async function createDemoData(req, res) {
         await userRepo.save(user);
       }
     }
+    console.log('✅ Unassigned users from stores');
     
-    // Delete existing data (FIXED: Use clear() or remove() instead of delete())
+    // 🔥 CRITICAL FIX: Delete in correct order to avoid FK constraint errors
+    // Order: Inventory → Products → Stores
+    
+    // 1. Delete ALL inventory first (has FK to products AND stores)
+    try {
+      const existingInventory = await inventoryRepo.find();
+      if (existingInventory.length > 0) {
+        await inventoryRepo.remove(existingInventory);
+        console.log(`✅ Deleted ${existingInventory.length} inventory records`);
+      }
+    } catch (deleteError) {
+      console.warn('⚠️  Could not delete inventory:', deleteError.message);
+    }
+    
+    // 2. Delete ALL products (has FK to stores via inventory)
+    try {
+      const existingProducts = await productRepo.find();
+      if (existingProducts.length > 0) {
+        await productRepo.remove(existingProducts);
+        console.log(`✅ Deleted ${existingProducts.length} products`);
+      }
+    } catch (deleteError) {
+      console.warn('⚠️  Could not delete products:', deleteError.message);
+    }
+    
+    // 3. NOW delete stores (no more FK dependencies)
     try {
       const existingStores = await storeRepo.find();
       if (existingStores.length > 0) {
         await storeRepo.remove(existingStores);
+        console.log(`✅ Deleted ${existingStores.length} stores`);
       }
     } catch (deleteError) {
       console.warn('⚠️  Could not delete stores:', deleteError.message);
     }
-    console.log('✅ Cleared existing stores');
     
     // Create demo stores
     const demoStores = [
@@ -400,11 +426,28 @@ exports.refreshData = async (req, res) => {
       console.log(`✅ Unassigned ${unassignedCount} users from stores`);
     }
     
-    // Delete ALL existing stores
+    // 🔥 CRITICAL FIX: Delete in correct order to avoid FK constraint errors
+    // Order: Inventory → Products → Stores
+    
+    // 1. Delete ALL inventory first
+    const allInventory = await inventoryRepo.find();
+    if (allInventory.length > 0) {
+      await inventoryRepo.remove(allInventory);
+      console.log(`✅ Deleted ${allInventory.length} inventory records`);
+    }
+    
+    // 2. Delete ALL products
+    const allProducts = await productRepo.find();
+    if (allProducts.length > 0) {
+      await productRepo.remove(allProducts);
+      console.log(`✅ Deleted ${allProducts.length} products`);
+    }
+    
+    // 3. NOW delete stores
     const allStores = await storeRepo.find();
     if (allStores.length > 0) {
       await storeRepo.remove(allStores);
-      console.log(`✅ Deleted ${allStores.length} existing stores`);
+      console.log(`✅ Deleted ${allStores.length} stores`);
     }
     
     // Fetch and create stores from Shopify
