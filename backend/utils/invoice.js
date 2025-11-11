@@ -293,12 +293,19 @@ class InvoiceGenerator {
           const igst = 0; // For same state, IGST is 0
           const itemTotal = mrpTotal; // Final amount = MRP (tax already included)
           
+          // 🔥 DYNAMIC HSN CODE based on product category/name
+          const itemName = (item.name || 'Product').toLowerCase();
+          let hsnCode = '90031900'; // Default: Eyeglass/Frame
+          if (itemName.includes('sunglass')) {
+            hsnCode = '90041000'; // Sunglass
+          }
+          
           colX = margin;
           doc.text((index + 1).toString(), colX, itemY, { width: colWidths.sl, align: 'center' });
           colX += colWidths.sl;
           doc.text(item.name || 'Product', colX, itemY, { width: colWidths.description, align: 'center' });
           colX += colWidths.description;
-          doc.text('90031900', colX, itemY, { width: colWidths.hsn, align: 'center' });
+          doc.text(hsnCode, colX, itemY, { width: colWidths.hsn, align: 'center' });
           colX += colWidths.hsn;
           doc.text(quantity.toString(), colX, itemY, { width: colWidths.qty, align: 'center' });
           colX += colWidths.qty;
@@ -448,8 +455,15 @@ class InvoiceGenerator {
         const cgstAmount = totalTax / 2;
         const sgstAmount = totalTax / 2;
         
+        // 🔥 DYNAMIC HSN CODE for tax breakdown (use first item's category)
+        const firstItemName = (sale.items[0]?.name || 'Product').toLowerCase();
+        let taxHsnCode = '90031900'; // Default: Eyeglass/Frame
+        if (firstItemName.includes('sunglass')) {
+          taxHsnCode = '90041000'; // Sunglass
+        }
+        
         colX = margin;
-        doc.text('90031900', colX, itemY + 3, { width: taxColWidths.hsn, align: 'center' });
+        doc.text(taxHsnCode, colX, itemY + 3, { width: taxColWidths.hsn, align: 'center' });
         colX += taxColWidths.hsn;
         doc.text(taxableValue.toFixed(2), colX, itemY + 3, { width: taxColWidths.taxable, align: 'center' });
         colX += taxColWidths.taxable;
@@ -496,8 +510,8 @@ class InvoiceGenerator {
         doc.text("Company's Bank Details", margin, itemY);
         doc.font('Helvetica').fontSize(8);
         doc.text('Bank Name: Kotak Mahindra Bank', margin, itemY + 15);
-        doc.text('A/c No.: 2512756649', margin, itemY + 27);
-        doc.text('Branch & IFSC Code: KKBK0004485', margin, itemY + 39);
+        doc.text('A/c No.: 2645279599', margin, itemY + 27);
+        doc.text('Branch & IFS Code: KKBK0004585', margin, itemY + 39);
 
         // Declaration (Right)
         doc.fontSize(9).font('Helvetica-Bold');
