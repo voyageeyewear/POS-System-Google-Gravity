@@ -15,5 +15,8 @@ router.post('/refresh', authenticate, dataManagementController.refreshData);
 // DIAGNOSTIC: Check database status (available to all authenticated users)
 router.get('/status', authenticate, dataManagementController.getDatabaseStatus);
 
+// 🔥 NUCLEAR FIX: Complete setup - Creates data + Assigns store in ONE call!
+router.post('/complete-setup', authenticate, dataManagementController.completeSetup);
+
 module.exports = router;
 

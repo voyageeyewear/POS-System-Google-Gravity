@@ -731,3 +731,107 @@ exports.getDatabaseStatus = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 🔥 NUCLEAR FIX: Complete setup for cashier - Creates data + Assigns store in ONE call!
+exports.completeSetup = async (req, res) => {
+  try {
+    console.log('🔥🔥🔥 NUCLEAR FIX: Complete setup starting...');
+    console.log('👤 Current user:', req.user);
+    
+    const storeRepo = getStoreRepository();
+    const userRepo = getUserRepository();
+    const productRepo = getProductRepository();
+    
+    // Step 1: Check if we have stores and products
+    const storeCount = await storeRepo.count();
+    const productCount = await productRepo.count();
+    
+    console.log('📊 Current state:', { storeCount, productCount });
+    
+    // Step 2: Create demo data if needed
+    if (storeCount === 0 || productCount === 0) {
+      console.log('🎭 No data found, creating demo data...');
+      
+      // Call createDemoData function directly (internal call, not via req/res)
+      const tempRes = {
+        json: (data) => {
+          console.log('✅ Demo data created:', data);
+          return data;
+        },
+        status: (code) => ({
+          json: (data) => {
+            console.error('❌ Demo data error:', data);
+            throw new Error(data.error || 'Demo data creation failed');
+          }
+        })
+      };
+      
+      await createDemoData(req, tempRes);
+      
+      console.log('✅ Demo data creation completed');
+    } else {
+      console.log('✅ Data already exists');
+    }
+    
+    // Step 3: Get the current user with latest data
+    const currentUser = await userRepo.findOne({
+      where: { id: req.user.id },
+      relations: ['assignedStore']
+    });
+    
+    console.log('👤 Current user loaded:', {
+      email: currentUser.email,
+      role: currentUser.role,
+      currentStore: currentUser.assignedStore?.name
+    });
+    
+    // Step 4: Auto-assign to first store if cashier has no store
+    if (currentUser.role === 'cashier' && !currentUser.assignedStoreId) {
+      console.log('🔥 Cashier has no store, auto-assigning...');
+      
+      const firstStore = await storeRepo.findOne({ where: { isActive: true } });
+      
+      if (firstStore) {
+        currentUser.assignedStoreId = firstStore.id;
+        await userRepo.save(currentUser);
+        console.log(`✅ Auto-assigned ${currentUser.email} to ${firstStore.name}`);
+      } else {
+        throw new Error('No stores available for assignment');
+      }
+    }
+    
+    // Step 5: Reload user with store relation
+    const updatedUser = await userRepo.findOne({
+      where: { id: currentUser.id },
+      relations: ['assignedStore']
+    });
+    
+    console.log('✅ NUCLEAR FIX COMPLETE:', {
+      user: updatedUser.email,
+      assignedStore: updatedUser.assignedStore?.name,
+      storeId: updatedUser.assignedStoreId
+    });
+    
+    // Step 6: Return success
+    res.json({
+      message: '🔥 COMPLETE SETUP SUCCESS!',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        assignedStore: updatedUser.assignedStore
+      },
+      stores: await storeRepo.count(),
+      products: await productRepo.count(),
+      instructions: 'Logout and login again to load products!'
+    });
+    
+  } catch (error) {
+    console.error('❌ NUCLEAR FIX ERROR:', error);
+    res.status(500).json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
