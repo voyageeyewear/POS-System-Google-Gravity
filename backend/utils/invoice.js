@@ -447,63 +447,113 @@ class InvoiceGenerator {
         itemY += 25;
         doc.font('Helvetica').fontSize(8);
         
-        // TAX-INCLUSIVE: Extract base price from MRP total
-        const mrpTotal = subtotal - totalDiscount; // Total MRP
-        const taxRate = parseFloat(sale.items[0]?.taxRate || 5);
-        const taxMultiplier = 1 + (taxRate / 100);
-        const taxableValue = mrpTotal / taxMultiplier; // Base price (excluding tax)
+        // 🔥 FIX: Group items by HSN code and tax rate for proper tax breakdown
+        const taxGroups = {};
         
-        const cgstRate = taxRate / 2;
-        const sgstRate = taxRate / 2;
-        const cgstAmount = totalTax / 2;
-        const sgstAmount = totalTax / 2;
+        sale.items.forEach((item) => {
+          const unitPrice = parseFloat(item.unitPrice || 0);
+          const discount = parseFloat(item.discount || 0);
+          const quantity = parseInt(item.quantity || 1);
+          const taxRate = parseFloat(item.taxRate || 5);
+          
+          // Determine HSN code
+          const itemName = (item.name || 'Product').toLowerCase();
+          const hsnCode = itemName.includes('sunglass') ? '90041000' : '90031900';
+          
+          // Create unique key for this tax group
+          const groupKey = `${hsnCode}_${taxRate}`;
+          
+          if (!taxGroups[groupKey]) {
+            taxGroups[groupKey] = {
+              hsnCode,
+              taxRate,
+              taxableValue: 0,
+              cgstAmount: 0,
+              sgstAmount: 0,
+              igstAmount: 0,
+              totalTax: 0
+            };
+          }
+          
+          // Calculate tax-inclusive amounts
+          const mrpTotal = (unitPrice - discount) * quantity;
+          const taxMultiplier = 1 + (taxRate / 100);
+          const taxableAmount = mrpTotal / taxMultiplier;
+          const itemTotalTax = mrpTotal - taxableAmount;
+          
+          // Add to group
+          taxGroups[groupKey].taxableValue += taxableAmount;
+          taxGroups[groupKey].cgstAmount += itemTotalTax / 2;
+          taxGroups[groupKey].sgstAmount += itemTotalTax / 2;
+          taxGroups[groupKey].totalTax += itemTotalTax;
+        });
         
-        // 🔥 DYNAMIC HSN CODE for tax breakdown (use first item's category)
-        const firstItemName = (sale.items[0]?.name || 'Product').toLowerCase();
-        let taxHsnCode = '90031900'; // Default: Eyeglass/Frame
-        if (firstItemName.includes('sunglass')) {
-          taxHsnCode = '90041000'; // Sunglass
-        }
+        // Draw tax breakdown rows for each group
+        const taxGroupArray = Object.values(taxGroups);
+        let taxRowY = itemY;
         
-        colX = margin;
-        doc.text(taxHsnCode, colX, itemY + 3, { width: taxColWidths.hsn, align: 'center' });
-        colX += taxColWidths.hsn;
-        doc.text(taxableValue.toFixed(2), colX, itemY + 3, { width: taxColWidths.taxable, align: 'center' });
-        colX += taxColWidths.taxable;
-        doc.text(`${cgstRate}%`, colX, itemY + 3, { width: taxColWidths.cgstRate, align: 'center' });
-        doc.text(cgstAmount.toFixed(2), colX + taxColWidths.cgstRate, itemY + 3, { width: taxColWidths.cgstAmt, align: 'center' });
-        colX += taxColWidths.cgstRate + taxColWidths.cgstAmt;
-        doc.text(`${sgstRate}%`, colX, itemY + 3, { width: taxColWidths.sgstRate, align: 'center' });
-        doc.text(sgstAmount.toFixed(2), colX + taxColWidths.sgstRate, itemY + 3, { width: taxColWidths.sgstAmt, align: 'center' });
-        colX += taxColWidths.sgstRate + taxColWidths.sgstAmt;
-        doc.text('0%', colX, itemY + 3, { width: taxColWidths.igstRate, align: 'center' });
-        doc.text('0.00', colX + taxColWidths.igstRate, itemY + 3, { width: taxColWidths.igstAmt, align: 'center' });
-        colX += taxColWidths.igstRate + taxColWidths.igstAmt;
-        doc.text(totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
-
-        itemY += 20;
-        doc.rect(margin, itemY, pageWidth - 2 * margin, 15).stroke();
+        taxGroupArray.forEach((group, index) => {
+          if (index > 0) {
+            // Draw horizontal line between rows
+            doc.rect(margin, taxRowY, tableWidth, 15).stroke();
+            taxRowY += 15;
+          } else {
+            doc.rect(margin, taxRowY, tableWidth, 15).stroke();
+          }
+          
+          const cgstRate = group.taxRate / 2;
+          const sgstRate = group.taxRate / 2;
+          
+          colX = margin;
+          doc.text(group.hsnCode, colX, taxRowY + 3, { width: taxColWidths.hsn, align: 'center' });
+          colX += taxColWidths.hsn;
+          doc.text(group.taxableValue.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.taxable, align: 'center' });
+          colX += taxColWidths.taxable;
+          doc.text(`${cgstRate}%`, colX, taxRowY + 3, { width: taxColWidths.cgstRate, align: 'center' });
+          doc.text(group.cgstAmount.toFixed(2), colX + taxColWidths.cgstRate, taxRowY + 3, { width: taxColWidths.cgstAmt, align: 'center' });
+          colX += taxColWidths.cgstRate + taxColWidths.cgstAmt;
+          doc.text(`${sgstRate}%`, colX, taxRowY + 3, { width: taxColWidths.sgstRate, align: 'center' });
+          doc.text(group.sgstAmount.toFixed(2), colX + taxColWidths.sgstRate, taxRowY + 3, { width: taxColWidths.sgstAmt, align: 'center' });
+          colX += taxColWidths.sgstRate + taxColWidths.sgstAmt;
+          doc.text('0%', colX, taxRowY + 3, { width: taxColWidths.igstRate, align: 'center' });
+          doc.text('0.00', colX + taxColWidths.igstRate, taxRowY + 3, { width: taxColWidths.igstAmt, align: 'center' });
+          colX += taxColWidths.igstRate + taxColWidths.igstAmt;
+          doc.text(group.totalTax.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.totalTax, align: 'center' });
+          
+          taxRowY += 15;
+        });
+        
+        // Total Row for tax breakdown
+        doc.rect(margin, taxRowY, pageWidth - 2 * margin, 15).stroke();
         doc.font('Helvetica-Bold');
         
+        // Calculate totals across all groups
+        const totalTaxableValue = taxGroupArray.reduce((sum, g) => sum + g.taxableValue, 0);
+        const totalCgstAmount = taxGroupArray.reduce((sum, g) => sum + g.cgstAmount, 0);
+        const totalSgstAmount = taxGroupArray.reduce((sum, g) => sum + g.sgstAmount, 0);
+        const totalIgstAmount = 0;
+        const grandTotalTax = taxGroupArray.reduce((sum, g) => sum + g.totalTax, 0);
+        
         colX = margin;
-        doc.text('Total', colX, itemY + 3, { width: taxColWidths.hsn, align: 'center' });
+        doc.text('Total', colX, taxRowY + 3, { width: taxColWidths.hsn, align: 'center' });
         colX += taxColWidths.hsn;
-        doc.text(taxableValue.toFixed(2), colX, itemY + 3, { width: taxColWidths.taxable, align: 'center' });
+        doc.text(totalTaxableValue.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.taxable, align: 'center' });
         colX += taxColWidths.taxable + taxColWidths.cgstRate;
-        doc.text(cgstAmount.toFixed(2), colX, itemY + 3, { width: taxColWidths.cgstAmt, align: 'center' });
+        doc.text(totalCgstAmount.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.cgstAmt, align: 'center' });
         colX += taxColWidths.cgstAmt + taxColWidths.sgstRate;
-        doc.text(sgstAmount.toFixed(2), colX, itemY + 3, { width: taxColWidths.sgstAmt, align: 'center' });
+        doc.text(totalSgstAmount.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.sgstAmt, align: 'center' });
         colX += taxColWidths.sgstAmt + taxColWidths.igstRate;
-        doc.text('0.00', colX, itemY + 3, { width: taxColWidths.igstAmt, align: 'center' });
+        doc.text('0.00', colX, taxRowY + 3, { width: taxColWidths.igstAmt, align: 'center' });
         colX += taxColWidths.igstAmt;
-        doc.text(totalTax.toFixed(2), colX, itemY + 3, { width: taxColWidths.totalTax, align: 'center' });
+        doc.text(grandTotalTax.toFixed(2), colX, taxRowY + 3, { width: taxColWidths.totalTax, align: 'center' });
+        
+        itemY = taxRowY + 15;
 
         // Tax Amount in Words
-        itemY += 25;
         doc.font('Helvetica-Bold').fontSize(9);
         doc.text('Tax Amount (in words):', margin, itemY);
         doc.font('Helvetica');
-        doc.text(amountInWords(totalTax), margin, itemY + 12);
+        doc.text(amountInWords(grandTotalTax), margin, itemY + 12);
 
         // ===== FOOTER =====
         itemY += 50;
