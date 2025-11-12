@@ -354,11 +354,23 @@ export default function POS() {
     try {
       const saleData = {
         storeId: user.assignedStore.id || user.assignedStore._id,
-        items: cart.map((item) => ({
-          productId: item.productId, // Use product ID, not cart item id
-          quantity: item.quantity,
-          discount: item.discount,
-        })),
+        items: cart.map((item) => {
+          // 🔥 FIX: Calculate discount amount per unit (not percentage value)
+          let discountPerUnit = 0;
+          if (item.discountType === 'percentage') {
+            // Convert percentage to actual amount per unit
+            discountPerUnit = (item.price * item.discount) / 100;
+          } else {
+            // Already a flat amount per unit
+            discountPerUnit = item.discount;
+          }
+          
+          return {
+            productId: item.productId, // Use product ID, not cart item id
+            quantity: item.quantity,
+            discount: discountPerUnit, // Send calculated discount amount per unit
+          };
+        }),
         customerInfo,
         paymentMethod,
       };
