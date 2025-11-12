@@ -99,53 +99,33 @@ class InvoiceGenerator {
         const pageWidth = 595;
         const margin = 15;
         
-        // Company Logo - Top Left (Big with tight spacing)
+        // LEFT: Company Logo
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
-        let logoWidth = 0;
-        let logoBottomY = 50; // Default if no logo
+        const logoSize = 80;
         if (fs.existsSync(logoPath)) {
-          const logoHeight = 100; // Big logo with better proportions
-          const logoWidthActual = 100;
-          doc.image(logoPath, margin, 30, { width: logoWidthActual, height: logoHeight });
-          
-          // Add "SS ENTERPRISES" text below the logo, centered (absolutely no space)
-          doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
-            .text('SS ENTERPRISES', margin, 30 + logoHeight - 3, { 
-              width: logoWidthActual, 
-              align: 'center' 
-            });
-          
-          logoWidth = logoWidthActual + 10; // Reduced spacing for tighter layout
-          logoBottomY = 30 + logoHeight + 18; // Bottom of logo + text + spacing
+          doc.image(logoPath, margin, 30, { width: logoSize, height: logoSize });
         }
         
-        // Company Name (Large, Bold) - Next to logo, changed to Voyage Eyewear
-        // COMMENTED OUT: Voyage Eyewear text next to logo
-        // const companyNameX = margin + logoWidth;
-        // doc.fontSize(24).font('Helvetica-Bold').fillColor('#000000').text('Voyage Eyewear', companyNameX, 60, {
-        //   width: pageWidth - companyNameX - margin - 220,
-        //   align: 'left'
-        // });
+        // CENTER: Tax Invoice Title and Company Details
+        const centerX = pageWidth / 2;
         
-        // Invoice Number Box (Top Right) - Wider for longer invoice numbers
-        const invoiceBoxWidth = 215;
-        const invoiceBoxX = pageWidth - margin - invoiceBoxWidth;
-        doc.rect(invoiceBoxX, 50, invoiceBoxWidth, 45).stroke();
-        doc.fontSize(10).font('Helvetica-Bold').text('Invoice No.:', invoiceBoxX + 10, 60);
-        doc.fontSize(9).font('Helvetica').text(sale.invoiceNumber, invoiceBoxX + 10, 73, { 
-          width: invoiceBoxWidth - 20, 
-          align: 'left' 
+        // TAX INVOICE (underlined, centered)
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000');
+        const taxInvoiceText = 'TAX INVOICE';
+        const taxInvoiceWidth = doc.widthOfString(taxInvoiceText);
+        doc.text(taxInvoiceText, centerX - taxInvoiceWidth / 2, 35);
+        doc.moveTo(centerX - taxInvoiceWidth / 2, 48)
+           .lineTo(centerX + taxInvoiceWidth / 2, 48)
+           .stroke();
+        
+        // Company Name (Large, Bold, Centered)
+        doc.fontSize(16).font('Helvetica-Bold');
+        doc.text('SS ENTERPRISES', margin + logoSize + 10, 55, {
+          width: pageWidth - (margin + logoSize + 10) - (margin + 100),
+          align: 'center'
         });
-        doc.fontSize(10).font('Helvetica-Bold').text('Dated:', invoiceBoxX + 115, 60);
-        const invoiceDate = new Date(sale.saleDate);
-        const day = invoiceDate.getDate().toString().padStart(2, '0');
-        const month = invoiceDate.toLocaleDateString('en-US', { month: 'short' });
-        const year = invoiceDate.getFullYear();
-        doc.fontSize(9).font('Helvetica').text(`${day} ${month} ${year}`, invoiceBoxX + 115, 73);
-
-        // Company Details (Address, GST, Email) - Start below logo
-        doc.fontSize(9).font('Helvetica');
-        // Format store address properly
+        
+        // Format store address
         let storeAddress = 'C-7/61, Sector-7, Rohini Delhi-110085';
         if (store.address) {
           if (typeof store.address === 'object') {
@@ -160,11 +140,52 @@ class InvoiceGenerator {
             storeAddress = store.address;
           }
         }
-        // Position address below the logo
-        const addressStartY = logoBottomY + 5;
-        doc.text(storeAddress, margin, addressStartY);
-        doc.text(`GSTIN/UIN: 08AGFPK7804C1ZQ`, margin, addressStartY + 15);
-        doc.text(`E-Mail: ${store.email || 'ssenterprise255@gmail.com'}`, margin, addressStartY + 30);
+        
+        // Address (centered)
+        doc.fontSize(9).font('Helvetica');
+        doc.text(storeAddress, margin + logoSize + 10, 75, {
+          width: pageWidth - (margin + logoSize + 10) - (margin + 100),
+          align: 'center'
+        });
+        
+        // GSTIN (centered)
+        doc.text('GSTIN: 08AGFPK7804C1ZQ, PAN: AAICR8905Q', margin + logoSize + 10, 90, {
+          width: pageWidth - (margin + logoSize + 10) - (margin + 100),
+          align: 'center'
+        });
+        
+        // Contact Details (centered)
+        doc.fontSize(8);
+        doc.text(`Tel No: ${store.phone || '011-45809914'}    Email Id: ${store.email || 'ssenterprise255@gmail.com'}`, 
+          margin + logoSize + 10, 103, {
+          width: pageWidth - (margin + logoSize + 10) - (margin + 100),
+          align: 'center'
+        });
+        
+        // RIGHT: Invoice Details Box with "Original Copy"
+        const rightBoxX = pageWidth - margin - 95;
+        
+        // "Original Copy" text
+        doc.fontSize(10).font('Helvetica-Oblique');
+        doc.text('Original Copy', rightBoxX, 30, { width: 95, align: 'center' });
+        
+        // Invoice Number Box
+        doc.rect(rightBoxX, 50, 95, 65).stroke();
+        doc.fontSize(9).font('Helvetica-Bold');
+        doc.text('Invoice No.:', rightBoxX + 5, 55, { width: 85 });
+        doc.fontSize(8).font('Helvetica');
+        doc.text(sale.invoiceNumber, rightBoxX + 5, 68, { width: 85, align: 'left' });
+        
+        doc.fontSize(9).font('Helvetica-Bold');
+        doc.text('Dated:', rightBoxX + 5, 85);
+        const invoiceDate = new Date(sale.saleDate);
+        const day = invoiceDate.getDate().toString().padStart(2, '0');
+        const month = invoiceDate.toLocaleDateString('en-US', { month: 'short' });
+        const year = invoiceDate.getFullYear();
+        doc.fontSize(8).font('Helvetica');
+        doc.text(`${day} ${month} ${year}`, rightBoxX + 5, 98);
+        
+        const addressStartY = 125; // Start content below header
 
         // ===== CONSIGNEE AND BUYER BOXES =====
         const boxY = addressStartY + 50; // Start boxes below company details
