@@ -157,9 +157,18 @@ export default function SalesReports() {
       
       setEditItems(items);
       
-      // Load available products for the store
+      // Load available products for the store with inventory information
       const productsResponse = await productAPI.getAll({ limit: 5000 });
-      setAvailableProducts(productsResponse.data.products || []);
+      const products = productsResponse.data.products || [];
+      
+      // Filter to show only products with available inventory
+      const productsWithInventory = products.filter(product => {
+        const totalInventory = product.inventory?.reduce((sum, inv) => sum + parseInt(inv.quantity || 0), 0) || 0;
+        return totalInventory > 0;
+      });
+      
+      setAvailableProducts(productsWithInventory);
+      console.log(`📦 Loaded ${productsWithInventory.length} products with available inventory (out of ${products.length} total)`);
       
       setShowEditModal(true);
     } catch (error) {
@@ -202,6 +211,7 @@ export default function SalesReports() {
     toast.success(`${product.name} added`);
   };
 
+  // Filter products based on search term (already filtered for inventory in handleEditSale)
   const filteredAvailableProducts = availableProducts.filter(product =>
     product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
     product.sku.toLowerCase().includes(productSearchTerm.toLowerCase())
