@@ -99,14 +99,14 @@ class InvoiceGenerator {
         const pageWidth = 595;
         const margin = 15;
         
-        // Company Logo - Top Left
+        // Company Logo - Top Left (Bigger size)
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
         let logoWidth = 0;
         if (fs.existsSync(logoPath)) {
-          const logoHeight = 60;
-          const logoWidthActual = 60; // Adjust based on logo aspect ratio
-          doc.image(logoPath, margin, 35, { width: logoWidthActual, height: logoHeight });
-          logoWidth = logoWidthActual + 10; // Add spacing after logo
+          const logoHeight = 90;
+          const logoWidthActual = 90; // Adjust based on logo aspect ratio
+          doc.image(logoPath, margin, 30, { width: logoWidthActual, height: logoHeight });
+          logoWidth = logoWidthActual + 15; // Add spacing after logo
         }
         
         // Company Name (Large, Bold) - Next to logo
