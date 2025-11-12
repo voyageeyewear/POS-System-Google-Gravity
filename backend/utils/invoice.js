@@ -98,7 +98,7 @@ class InvoiceGenerator {
         // ===== WATERMARK (CENTERED BACKGROUND) =====
         const pageWidth = 595;
         const pageHeight = 842; // A4 height
-        const watermarkPath = path.join(__dirname, '../assets/voyage-logo.png');
+        const watermarkPath = path.join(__dirname, '../assets/Voyage Logo watermark.png');
         
         if (fs.existsSync(watermarkPath)) {
           const watermarkWidth = 450; // Larger watermark width
@@ -116,9 +116,9 @@ class InvoiceGenerator {
         // ===== HEADER SECTION =====
         const margin = 15;
         
-        // LEFT: Company Logo (increased size with proper aspect ratio)
+        // LEFT: Company Logo (with proper aspect ratio)
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
-        const logoWidth = 110;
+        const logoWidth = 85; // Decreased size
         if (fs.existsSync(logoPath)) {
           doc.image(logoPath, margin, 30, { width: logoWidth }); // Height auto-calculated to maintain aspect ratio
         }
