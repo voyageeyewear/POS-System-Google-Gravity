@@ -64,7 +64,7 @@ export default function UsersManagement() {
       console.log('🔄 Submitting user data:', userData);
 
       if (editingUser) {
-        await authAPI.updateUser(editingUser.id || editingUser._id, userData);
+        await authAPI.updateUser(editingUser.id, userData);
         toast.success('User updated successfully');
       } else {
         userData.password = formData.password;
@@ -89,7 +89,7 @@ export default function UsersManagement() {
       email: user.email,
       password: '',
       role: user.role,
-      assignedStore: user.assignedStore?.id || user.assignedStore?._id || '',
+      assignedStore: user.assignedStore?.id || '',
     });
     setShowModal(true);
   };
@@ -168,7 +168,7 @@ export default function UsersManagement() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {users.map((usr) => (
-                <tr key={usr._id} className="hover:bg-gray-50">
+                <tr key={usr.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-800">
                     {usr.name}
                   </td>
@@ -214,7 +214,7 @@ export default function UsersManagement() {
                         <Edit className="w-4 h-4 text-gray-600" />
                       </button>
                       <button
-                        onClick={() => handleDelete(usr.id || usr._id)}
+                        onClick={() => handleDelete(usr.id)}
                         className="p-1 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -316,7 +316,7 @@ export default function UsersManagement() {
                 >
                   <option value="">No store (Admin only)</option>
                   {stores.map((store) => (
-                    <option key={store.id || store._id} value={store.id || store._id}>
+                    <option key={store.id} value={store.id}>
                       {store.name}
                     </option>
                   ))}

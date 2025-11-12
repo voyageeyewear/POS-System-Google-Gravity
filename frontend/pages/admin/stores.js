@@ -69,7 +69,7 @@ export default function StoresManagement() {
       };
 
       if (editingStore) {
-        await storeAPI.update(editingStore._id, storeData);
+        await storeAPI.update(editingStore.id, storeData);
         toast.success('Store updated successfully');
       } else {
         await storeAPI.create(storeData);
@@ -182,7 +182,7 @@ export default function StoresManagement() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {stores.map((store) => (
           <div
-            key={store._id}
+            key={store.id}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition"
           >
             <div className="flex items-start justify-between mb-3">
@@ -203,7 +203,7 @@ export default function StoresManagement() {
                   <Edit className="w-4 h-4 text-gray-600" />
                 </button>
                 <button
-                  onClick={() => handleDelete(store._id)}
+                  onClick={() => handleDelete(store.id)}
                   className="p-1 hover:bg-red-50 rounded"
                 >
                   <Trash2 className="w-4 h-4 text-red-600" />

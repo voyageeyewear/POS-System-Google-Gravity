@@ -159,7 +159,7 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {recentSales.map((sale) => (
-                  <tr key={sale._id} className="hover:bg-gray-50">
+                  <tr key={sale.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">
                       {sale.invoiceNumber}
                     </td>

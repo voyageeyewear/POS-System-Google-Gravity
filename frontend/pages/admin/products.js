@@ -347,7 +347,7 @@ export default function ProductsManagement() {
                 ) || 0;
 
                 return (
-                  <tr key={product._id} className="hover:bg-gray-50">
+                  <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {product.image ? (

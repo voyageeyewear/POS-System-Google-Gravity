@@ -34,17 +34,28 @@ export default function SalesReports() {
   const loadData = async () => {
     try {
       setLoadingSales(true);
-      const [salesRes, storesRes, statsRes] = await Promise.all([
-        saleAPI.getAll(filters),
-        storeAPI.getAll(),
-        saleAPI.getStats(filters),
-      ]);
+      
+      // Load data sequentially for better error tracking
+      console.log('📊 Loading sales data with filters:', filters);
+      
+      const salesRes = await saleAPI.getAll(filters);
+      console.log('✅ Sales loaded:', salesRes.data.sales?.length, 'sales');
       setSales(salesRes.data.sales);
+      
+      const storesRes = await storeAPI.getAll();
+      console.log('✅ Stores loaded:', storesRes.data.stores?.length, 'stores');
       setStores(storesRes.data.stores);
+      
+      const statsRes = await saleAPI.getStats(filters);
+      console.log('✅ Stats loaded:', statsRes.data.stats);
       setStats(statsRes.data.stats);
+      
     } catch (error) {
-      toast.error('Failed to load sales data');
-      console.error(error);
+      console.error('❌ Sales data loading error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to load sales data';
+      toast.error(errorMsg, { duration: 5000 });
     } finally {
       setLoadingSales(false);
     }
