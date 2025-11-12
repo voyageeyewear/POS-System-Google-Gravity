@@ -99,16 +99,21 @@ class InvoiceGenerator {
         const pageWidth = 595;
         const margin = 15;
         
-        // Company Logo (if exists) - Left side
-        const logoPath = path.join(__dirname, '../assets/logo.png');
+        // Company Logo - Top Left
+        const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
+        let logoWidth = 0;
         if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, margin, 40, { width: 50, height: 50 });
+          const logoHeight = 60;
+          const logoWidthActual = 60; // Adjust based on logo aspect ratio
+          doc.image(logoPath, margin, 35, { width: logoWidthActual, height: logoHeight });
+          logoWidth = logoWidthActual + 10; // Add spacing after logo
         }
         
-        // Company Name (Large, Bold) - Always centered
-        doc.fontSize(24).font('Helvetica-Bold').fillColor('#000000').text('SS ENTERPRISES', margin, 50, {
-          width: pageWidth - 2 * margin - 220,
-          align: 'center'
+        // Company Name (Large, Bold) - Next to logo
+        const companyNameX = margin + logoWidth;
+        doc.fontSize(24).font('Helvetica-Bold').fillColor('#000000').text('SS ENTERPRISES', companyNameX, 50, {
+          width: pageWidth - companyNameX - margin - 220,
+          align: 'left'
         });
         
         // Invoice Number Box (Top Right) - Wider for longer invoice numbers
