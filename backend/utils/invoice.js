@@ -101,15 +101,14 @@ class InvoiceGenerator {
         const watermarkPath = path.join(__dirname, '../assets/voyage-logo.png');
         
         if (fs.existsSync(watermarkPath)) {
-          const watermarkSize = 450; // Larger watermark (increased from 350)
-          const watermarkX = (pageWidth - watermarkSize) / 2; // Center horizontally
-          const watermarkY = (pageHeight - watermarkSize) / 2; // Center vertically
+          const watermarkWidth = 450; // Larger watermark width
+          const watermarkX = (pageWidth - watermarkWidth) / 2; // Center horizontally
+          const watermarkY = 200; // Vertical position from top
           
           doc.save();
           doc.opacity(0.15); // More visible opacity (15%, increased from 8%)
           doc.image(watermarkPath, watermarkX, watermarkY, { 
-            width: watermarkSize, 
-            height: watermarkSize 
+            width: watermarkWidth // Height auto-calculated to maintain aspect ratio
           });
           doc.restore(); // Restore full opacity for other content
         }
@@ -117,11 +116,11 @@ class InvoiceGenerator {
         // ===== HEADER SECTION =====
         const margin = 15;
         
-        // LEFT: Company Logo (increased size)
+        // LEFT: Company Logo (increased size with proper aspect ratio)
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
-        const logoSize = 110;
+        const logoWidth = 110;
         if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, margin, 30, { width: logoSize, height: logoSize });
+          doc.image(logoPath, margin, 30, { width: logoWidth }); // Height auto-calculated to maintain aspect ratio
         }
         
         // CENTER: Tax Invoice Title and Company Details
