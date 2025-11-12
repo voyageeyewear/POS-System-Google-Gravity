@@ -157,18 +157,23 @@ export default function SalesReports() {
       
       setEditItems(items);
       
-      // Load available products for the store with inventory information
-      const productsResponse = await productAPI.getAll({ limit: 5000 });
+      // Load available products for the specific store with inventory information
+      const productsResponse = await productAPI.getAll({ 
+        limit: 5000,
+        storeId: fullSale.storeId // Filter products by the sale's store
+      });
       const products = productsResponse.data.products || [];
       
-      // Filter to show only products with available inventory
+      // Filter to show only products with available inventory at this store
       const productsWithInventory = products.filter(product => {
-        const totalInventory = product.inventory?.reduce((sum, inv) => sum + parseInt(inv.quantity || 0), 0) || 0;
-        return totalInventory > 0;
+        // Check inventory specifically for this store
+        const storeInventory = product.inventory?.find(inv => parseInt(inv.storeId) === parseInt(fullSale.storeId));
+        const availableQty = storeInventory ? parseInt(storeInventory.quantity || 0) : 0;
+        return availableQty > 0;
       });
       
       setAvailableProducts(productsWithInventory);
-      console.log(`📦 Loaded ${productsWithInventory.length} products with available inventory (out of ${products.length} total)`);
+      console.log(`📦 Loaded ${productsWithInventory.length} products with available inventory for store ${fullSale.storeId} (out of ${products.length} total)`);
       
       setShowEditModal(true);
     } catch (error) {
