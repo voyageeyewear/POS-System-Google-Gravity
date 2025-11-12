@@ -473,13 +473,13 @@ export default function SalesReports() {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => downloadInvoice(sale.id, sale.invoiceNumber)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="Download Invoice"
-                      >
-                        <Download className="w-4 h-4 text-primary-600" />
-                      </button>
+                    <button
+                      onClick={() => downloadInvoice(sale.id, sale.invoiceNumber)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                      title="Download Invoice"
+                    >
+                      <Download className="w-4 h-4 text-primary-600" />
+                    </button>
                       <button
                         onClick={() => handleEditSale(sale)}
                         className="p-1 hover:bg-blue-50 rounded"

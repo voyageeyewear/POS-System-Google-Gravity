@@ -101,14 +101,19 @@ class InvoiceGenerator {
         const watermarkPath = path.join(__dirname, '../assets/Voyage Logo watermark.png');
         
         if (fs.existsSync(watermarkPath)) {
-          const watermarkWidth = 380; // Reduced watermark width
-          // Since logo is taller than wide (portrait), estimate height as ~1.3x width
-          const estimatedHeight = watermarkWidth * 1.3;
-          const watermarkX = (pageWidth - watermarkWidth) / 2; // Center horizontally
-          const watermarkY = (pageHeight - estimatedHeight) / 2; // Center vertically with correct height
+          const watermarkWidth = 380; // Watermark width
+          // Calculate center position
+          const watermarkX = (pageWidth - watermarkWidth) / 2; // Center horizontally: (595 - 380) / 2 = 107.5
+          
+          // For vertical centering: place at the middle of the page
+          // Page height is 842, middle is 421
+          // Offset upward by approximately half the watermark height to center it
+          // Estimated logo height is ~1.4x width for Voyage logo
+          const estimatedHeight = watermarkWidth * 1.4; // 380 * 1.4 = 532px
+          const watermarkY = (pageHeight / 2) - (estimatedHeight / 2); // 421 - 266 = 155
           
           doc.save();
-          doc.opacity(0.15); // More visible opacity (15%, increased from 8%)
+          doc.opacity(0.15); // 15% opacity
           doc.image(watermarkPath, watermarkX, watermarkY, { 
             width: watermarkWidth // Height auto-calculated to maintain aspect ratio
           });
