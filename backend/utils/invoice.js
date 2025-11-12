@@ -108,9 +108,9 @@ class InvoiceGenerator {
           const logoWidthActual = 100;
           doc.image(logoPath, margin, 30, { width: logoWidthActual, height: logoHeight });
           
-          // Add "SS ENTERPRISES" text below the logo, centered (no margin)
+          // Add "SS ENTERPRISES" text below the logo, centered (absolutely no space)
           doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
-            .text('SS ENTERPRISES', margin, 30 + logoHeight, { 
+            .text('SS ENTERPRISES', margin, 30 + logoHeight - 3, { 
               width: logoWidthActual, 
               align: 'center' 
             });
