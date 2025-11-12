@@ -99,16 +99,16 @@ class InvoiceGenerator {
         const pageWidth = 595;
         const margin = 15;
         
-        // Company Logo - Top Left (Much Bigger with bottom spacing)
+        // Company Logo - Top Left (Big with proper spacing)
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
         let logoWidth = 0;
         let logoBottomY = 50; // Default if no logo
         if (fs.existsSync(logoPath)) {
-          const logoHeight = 120; // Much bigger logo
-          const logoWidthActual = 120;
-          doc.image(logoPath, margin, 25, { width: logoWidthActual, height: logoHeight });
+          const logoHeight = 100; // Big logo with better proportions
+          const logoWidthActual = 100;
+          doc.image(logoPath, margin, 30, { width: logoWidthActual, height: logoHeight });
           logoWidth = logoWidthActual + 20; // More spacing after logo
-          logoBottomY = 25 + logoHeight + 10; // Bottom of logo + spacing
+          logoBottomY = 30 + logoHeight + 10; // Bottom of logo + spacing
         }
         
         // Company Name (Large, Bold) - Next to logo, changed to Voyage Eyewear
@@ -134,7 +134,7 @@ class InvoiceGenerator {
         const year = invoiceDate.getFullYear();
         doc.fontSize(9).font('Helvetica').text(`${day} ${month} ${year}`, invoiceBoxX + 115, 73);
 
-        // Company Details (Address, GST, Email)
+        // Company Details (Address, GST, Email) - Start below logo
         doc.fontSize(9).font('Helvetica');
         // Format store address properly
         let storeAddress = 'C-7/61, Sector-7, Rohini Delhi-110085';
@@ -151,12 +151,14 @@ class InvoiceGenerator {
             storeAddress = store.address;
           }
         }
-        doc.text(storeAddress, margin, 105);
-        doc.text(`GSTIN/UIN: 08AGFPK7804C1ZQ`, margin, 120);
-        doc.text(`E-Mail: ${store.email || 'ssenterprise255@gmail.com'}`, margin, 135);
+        // Position address below the logo
+        const addressStartY = logoBottomY + 5;
+        doc.text(storeAddress, margin, addressStartY);
+        doc.text(`GSTIN/UIN: 08AGFPK7804C1ZQ`, margin, addressStartY + 15);
+        doc.text(`E-Mail: ${store.email || 'ssenterprise255@gmail.com'}`, margin, addressStartY + 30);
 
         // ===== CONSIGNEE AND BUYER BOXES =====
-        const boxY = 180;
+        const boxY = addressStartY + 50; // Start boxes below company details
         const boxHeight = 95;
         const boxWidth = 257;
         
