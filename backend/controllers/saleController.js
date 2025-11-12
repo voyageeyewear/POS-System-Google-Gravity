@@ -409,7 +409,7 @@ exports.updateSale = async (req, res) => {
 
     // Step 1: Restore inventory for old items
     for (const oldItem of sale.items) {
-      const inventory = await inventoryRepo.findOne({
+      const inventory = await queryRunner.manager.findOne('Inventory', {
         where: {
           productId: oldItem.productId,
           storeId: sale.storeId
@@ -417,9 +417,11 @@ exports.updateSale = async (req, res) => {
       });
 
       if (inventory) {
-        inventory.quantity = parseInt(inventory.quantity) + parseInt(oldItem.quantity);
-        await inventoryRepo.save(inventory);
-        console.log(`✅ Restored ${oldItem.quantity} units of product ${oldItem.productId}`);
+        const oldQty = parseInt(inventory.quantity);
+        const restoreQty = parseInt(oldItem.quantity);
+        inventory.quantity = oldQty + restoreQty;
+        await queryRunner.manager.save(inventory);
+        console.log(`✅ Restored ${restoreQty} units of product ${oldItem.productId} (${oldQty} → ${inventory.quantity})`);
       }
     }
 
@@ -441,16 +443,24 @@ exports.updateSale = async (req, res) => {
         throw new Error(`Product not found: ${item.productId}`);
       }
 
-      // Check inventory
-      const inventory = await inventoryRepo.findOne({
+      // Check inventory - use queryRunner.manager to see restored quantities within transaction
+      const inventory = await queryRunner.manager.findOne('Inventory', {
         where: {
           productId: parseInt(item.productId),
           storeId: sale.storeId
         }
       });
 
-      if (!inventory || inventory.quantity < item.quantity) {
-        throw new Error(`Insufficient inventory for ${product.name}`);
+      if (!inventory) {
+        throw new Error(`No inventory record found for ${product.name}`);
+      }
+
+      // Check available quantity after restoration
+      const availableQuantity = parseInt(inventory.quantity);
+      console.log(`📦 Checking inventory for ${product.name}: Available=${availableQuantity}, Needed=${item.quantity}`);
+      
+      if (availableQuantity < item.quantity) {
+        throw new Error(`Insufficient inventory for ${product.name}. Available: ${availableQuantity}, Needed: ${item.quantity}`);
       }
 
       // Calculate item totals with TAX-INCLUSIVE PRICING
@@ -484,10 +494,10 @@ exports.updateSale = async (req, res) => {
       totalDiscount += itemDiscount;
       totalTax += taxAmount;
 
-      // Update inventory
-      inventory.quantity -= item.quantity;
-      await inventoryRepo.save(inventory);
-      console.log(`✅ Deducted ${item.quantity} units of ${product.name}`);
+      // Update inventory - deduct new quantity
+      inventory.quantity = availableQuantity - item.quantity;
+      await queryRunner.manager.save(inventory);
+      console.log(`✅ Deducted ${item.quantity} units of ${product.name} (${availableQuantity} → ${inventory.quantity})`);
     }
 
     // Step 4: Update sale totals first
