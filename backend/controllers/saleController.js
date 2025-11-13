@@ -623,24 +623,28 @@ exports.deleteSale = async (req, res) => {
 
   try {
     const { saleId } = req.params;
-    const saleRepo = getSaleRepository();
-    const saleItemRepo = getSaleItemRepository();
-    const inventoryRepo = getInventoryRepository();
+    console.log(`🗑️ Starting delete for sale ID: ${saleId}`);
 
-    console.log(`🗑️ Deleting sale ID: ${saleId}`);
+    // Get repositories
+    const saleRepo = queryRunner.manager.getRepository('Sale');
+    const saleItemRepo = queryRunner.manager.getRepository('SaleItem');
+    const inventoryRepo = queryRunner.manager.getRepository('Inventory');
 
-    // Get sale with all details
+    // Get sale with items
     const sale = await saleRepo.findOne({
       where: { id: parseInt(saleId) },
-      relations: ['items', 'items.product', 'store'],
+      relations: ['items', 'store'],
     });
 
     if (!sale) {
       await queryRunner.rollbackTransaction();
+      await queryRunner.release();
+      console.log(`❌ Sale not found: ${saleId}`);
       return res.status(404).json({ error: 'Sale not found' });
     }
 
     console.log(`📦 Found sale: ${sale.invoiceNumber} with ${sale.items.length} items`);
+    console.log(`📍 Store ID: ${sale.storeId}`);
 
     // Restore inventory for each item
     for (const item of sale.items) {
@@ -668,13 +672,13 @@ exports.deleteSale = async (req, res) => {
 
     // Delete sale items first (foreign key constraint)
     console.log(`🗑️ Deleting ${sale.items.length} sale items...`);
-    for (const item of sale.items) {
-      await queryRunner.manager.remove(item);
-    }
+    await saleItemRepo.delete({ saleId: parseInt(saleId) });
+    console.log(`✅ Sale items deleted`);
 
     // Delete the sale
     console.log(`🗑️ Deleting sale record...`);
-    await queryRunner.manager.remove(sale);
+    await saleRepo.delete({ id: parseInt(saleId) });
+    console.log(`✅ Sale record deleted`);
 
     await queryRunner.commitTransaction();
     
@@ -687,6 +691,7 @@ exports.deleteSale = async (req, res) => {
   } catch (error) {
     await queryRunner.rollbackTransaction();
     console.error('❌ Error deleting sale:', error);
+    console.error('Error stack:', error.stack);
     res.status(400).json({ error: error.message });
   } finally {
     await queryRunner.release();
