@@ -143,8 +143,8 @@ export default function POS() {
         return;
       }
       
-      // 🚀 SUPER SIMPLE: Just load ALL products at once (like admin does)
-      const response = await productAPI.getAll({ page, limit: 5000 }); // Load up to 5000 products
+      // 🔥 FIX: Load ALL products for cashiers (no limit)
+      const response = await productAPI.getAll({ page: 1, limit: 99999 }); // Load all products
       const productsData = response.data.products || [];
       const pagination = response.data.pagination;
       

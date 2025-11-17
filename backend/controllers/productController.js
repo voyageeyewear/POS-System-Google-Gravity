@@ -46,7 +46,8 @@ exports.getAllProducts = async (req, res) => {
     });
     
     const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+    // 🔥 FIX: For cashiers, load ALL products (no limit). For admins, use pagination.
+    const limitNum = isCashier ? 99999 : parseInt(limit); // Load all products for cashiers
     const skip = (pageNum - 1) * limitNum;
 
     let queryBuilder = productRepo.createQueryBuilder('product')
@@ -141,8 +142,10 @@ exports.getAllProducts = async (req, res) => {
       return new Date(b.createdAt) - new Date(a.createdAt); // Newer first
     });
 
-    // Apply pagination after sorting
-    const paginatedProducts = transformedProducts.slice(skip, skip + limitNum);
+    // 🔥 FIX: For cashiers, return ALL products. For admins, apply pagination.
+    const paginatedProducts = isCashier 
+      ? transformedProducts // Return all products for cashiers
+      : transformedProducts.slice(skip, skip + limitNum); // Paginate for admins
 
     console.log(`✅ Returning ${paginatedProducts.length} products to ${user?.role || 'user'} (${total} total, sorted by store stock)`);
     if (filterStoreId) {
@@ -150,13 +153,17 @@ exports.getAllProducts = async (req, res) => {
       console.log(`🏪 Store ID ${filterStoreId}: ${productsWithStock} products with stock, ${paginatedProducts.length - productsWithStock} products without stock`);
     }
 
+    // 🔥 FIX: For cashiers, return actual count. For admins, use pagination totals.
+    const responseTotal = isCashier ? paginatedProducts.length : total;
+    const responsePages = isCashier ? 1 : Math.ceil(total / limitNum);
+
     res.json({ 
       products: paginatedProducts,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
+        total: responseTotal,
+        pages: responsePages
       }
     });
   } catch (error) {
