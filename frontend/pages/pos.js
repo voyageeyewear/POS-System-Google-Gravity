@@ -860,18 +860,23 @@ export default function POS() {
           )}
         </div>
 
-        {/* Floating Cart Button */}
-        {selectedProducts.length > 0 && (
-          <div className="fixed bottom-6 right-6 z-40">
-            <button
-              onClick={moveToCart}
-              className="bg-primary-500 text-white px-6 py-4 rounded-full shadow-lg hover:bg-primary-600 transition flex items-center gap-3"
-            >
-              <ShoppingCart className="w-6 h-6" />
-              <span className="font-bold">Cart ({selectedProducts.length})</span>
-            </button>
-          </div>
-        )}
+        {/* Floating Cart Button - Always visible, enabled when products selected */}
+        <div className={`fixed right-6 z-40 ${selectedProducts.length === 0 ? 'bottom-24' : 'bottom-6'}`}>
+          <button
+            onClick={moveToCart}
+            disabled={selectedProducts.length === 0}
+            className={`px-6 py-4 rounded-full shadow-lg transition flex items-center gap-3 ${
+              selectedProducts.length > 0
+                ? 'bg-primary-500 text-white hover:bg-primary-600 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+            }`}
+          >
+            <ShoppingCart className="w-6 h-6" />
+            <span className="font-bold">
+              Cart {selectedProducts.length > 0 && `(${selectedProducts.length})`}
+            </span>
+          </button>
+        </div>
 
         {/* Cart Section */}
         {showCart && (
@@ -977,15 +982,17 @@ export default function POS() {
         onSubmit={handleCustomerSubmit}
       />
 
-      {/* Floating Dashboard Button */}
-      <button
-        onClick={() => router.push('/cashier-dashboard')}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 z-50 flex items-center gap-2"
-        style={{ boxShadow: '0 10px 30px rgba(59, 130, 246, 0.5)' }}
-      >
-        <TrendingUp className="w-6 h-6" />
-        <span className="font-medium pr-1">My Performance</span>
-      </button>
+      {/* Floating Dashboard Button - Hide when products are selected */}
+      {selectedProducts.length === 0 && (
+        <button
+          onClick={() => router.push('/cashier-dashboard')}
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 z-50 flex items-center gap-2"
+          style={{ boxShadow: '0 10px 30px rgba(59, 130, 246, 0.5)' }}
+        >
+          <TrendingUp className="w-6 h-6" />
+          <span className="font-medium pr-1">My Performance</span>
+        </button>
+      )}
     </Layout>
   );
 }
