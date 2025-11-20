@@ -6,7 +6,7 @@ const { UserMethods } = require('../entities/User');
 async function seedData() {
   try {
     console.log('🌱 Starting database seed...');
-    
+
     // Initialize TypeORM connection
     await AppDataSource.initialize();
     console.log('✅ Connected to PostgreSQL');
@@ -19,10 +19,10 @@ async function seedData() {
 
     // Clear existing data
     console.log('🗑️  Clearing existing data...');
-    await inventoryRepo.delete({});
-    await productRepo.delete({});
-    await userRepo.delete({});
-    await storeRepo.delete({});
+    await inventoryRepo.clear();
+    await productRepo.clear();
+    await userRepo.clear();
+    await storeRepo.clear();
     console.log('✅ Cleared existing data');
 
     // Create stores
@@ -222,11 +222,11 @@ async function seedData() {
     let productCount = 0;
     for (const data of productData) {
       const { inventoryData, ...productFields } = data;
-      
+
       // Create product
       const product = productRepo.create(productFields);
       await productRepo.save(product);
-      
+
       // Create inventory entries
       for (const inv of inventoryData) {
         const inventory = inventoryRepo.create({
@@ -236,7 +236,7 @@ async function seedData() {
         });
         await inventoryRepo.save(inventory);
       }
-      
+
       productCount++;
     }
     console.log(`✅ Created ${productCount} products with inventory`);

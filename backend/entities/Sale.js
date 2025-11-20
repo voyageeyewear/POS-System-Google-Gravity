@@ -51,12 +51,12 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     paymentMethod: {
-      type: 'enum',
+      type: 'simple-enum',
       enum: ['cash', 'upi', 'card', 'other'],
       nullable: false,
     },
     saleDate: {
-      type: 'timestamp',
+      type: 'datetime',
       default: () => 'CURRENT_TIMESTAMP',
     },
     notes: {
@@ -64,11 +64,11 @@ module.exports = new EntitySchema({
       default: '',
     },
     createdAt: {
-      type: 'timestamp',
+      type: 'datetime',
       createDate: true,
     },
     updatedAt: {
-      type: 'timestamp',
+      type: 'datetime',
       updateDate: true,
     },
   },

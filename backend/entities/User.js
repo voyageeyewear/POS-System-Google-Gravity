@@ -29,7 +29,7 @@ module.exports = new EntitySchema({
       select: false, // Don't include in default queries
     },
     role: {
-      type: 'enum',
+      type: 'simple-enum',
       enum: ['admin', 'cashier'],
       default: 'cashier',
     },
@@ -42,11 +42,11 @@ module.exports = new EntitySchema({
       default: true,
     },
     createdAt: {
-      type: 'timestamp',
+      type: 'datetime',
       createDate: true,
     },
     updatedAt: {
-      type: 'timestamp',
+      type: 'datetime',
       updateDate: true,
     },
   },
@@ -74,7 +74,7 @@ class UserMethods {
 
   static toJSON(user) {
     const { password, ...userWithoutPassword } = user;
-    
+
     // Ensure assignedStore has proper id field for frontend compatibility
     if (userWithoutPassword.assignedStore) {
       userWithoutPassword.assignedStore = {
@@ -83,7 +83,7 @@ class UserMethods {
         _id: userWithoutPassword.assignedStore.id, // For backwards compatibility
       };
     }
-    
+
     return userWithoutPassword;
   }
 }

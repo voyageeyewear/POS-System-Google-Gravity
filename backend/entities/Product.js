@@ -19,7 +19,7 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     category: {
-      type: 'enum',
+      type: 'simple-enum',
       enum: ['frame', 'eyeglass', 'sunglass', 'accessory'],
       nullable: false,
     },
@@ -58,11 +58,11 @@ module.exports = new EntitySchema({
       default: true,
     },
     createdAt: {
-      type: 'timestamp',
+      type: 'datetime',
       createDate: true,
     },
     updatedAt: {
-      type: 'timestamp',
+      type: 'datetime',
       updateDate: true,
     },
   },

@@ -10,11 +10,11 @@ function stripHtmlTags(html) {
   let text = html.replace(/<[^>]*>/g, '');
   // Decode HTML entities
   text = text.replace(/&nbsp;/g, ' ')
-             .replace(/&amp;/g, '&')
-             .replace(/&lt;/g, '<')
-             .replace(/&gt;/g, '>')
-             .replace(/&quot;/g, '"')
-             .replace(/&#39;/g, "'");
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
   // Trim and clean multiple spaces
   return text.trim().replace(/\s+/g, ' ');
 }
@@ -114,7 +114,7 @@ exports.downloadBackup = async (req, res) => {
 exports.getAllBackups = async (req, res) => {
   try {
     const backupsDir = path.join(__dirname, '../backups');
-    
+
     if (!fs.existsSync(backupsDir)) {
       return res.json({ backups: [] });
     }
@@ -124,7 +124,7 @@ exports.getAllBackups = async (req, res) => {
       const filePath = path.join(backupsDir, file);
       const stats = fs.statSync(filePath);
       const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
+
       return {
         fileName: file,
         name: content.metadata.backupName,
@@ -146,7 +146,7 @@ exports.getAllBackups = async (req, res) => {
 exports.cleanupData = async (req, res) => {
   try {
     console.log('🧹 Starting data cleanup...');
-    
+
     const saleItemRepo = getSaleItemRepository();
     const saleRepo = getSaleRepository();
     const customerRepo = getCustomerRepository();
@@ -156,7 +156,7 @@ exports.cleanupData = async (req, res) => {
 
     // 🔥 CRITICAL: Delete in correct order to avoid FK constraint errors
     // Order: SaleItems → Sales → Customers → Inventory → Products → Non-admin Users
-    
+
     // 1. Delete all sale items first (has FK to sales and products)
     console.log('🗑️  Step 1/6: Deleting sale items...');
     const allSaleItems = await saleItemRepo.find();
@@ -166,7 +166,7 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No sale items to delete');
     }
-    
+
     // 2. Delete all sales (has FK to customers, stores, cashiers)
     console.log('🗑️  Step 2/6: Deleting sales...');
     const allSales = await saleRepo.find();
@@ -176,7 +176,7 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No sales to delete');
     }
-    
+
     // 3. Delete all customers
     console.log('🗑️  Step 3/6: Deleting customers...');
     const allCustomers = await customerRepo.find();
@@ -186,7 +186,7 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No customers to delete');
     }
-    
+
     // 4. Delete all inventory (has FK to products and stores)
     console.log('🗑️  Step 4/6: Deleting inventory...');
     const allInventory = await inventoryRepo.find();
@@ -196,7 +196,7 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No inventory to delete');
     }
-    
+
     // 5. Delete all products
     console.log('🗑️  Step 5/6: Deleting products...');
     const allProducts = await productRepo.find();
@@ -206,7 +206,7 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No products to delete');
     }
-    
+
     // 6. Delete non-admin users (cashiers)
     console.log('🗑️  Step 6/6: Deleting non-admin users...');
     const nonAdminUsers = await userRepo.find({ where: { role: 'cashier' } });
@@ -216,10 +216,10 @@ exports.cleanupData = async (req, res) => {
     } else {
       console.log('✅ No non-admin users to delete');
     }
-    
+
     // Note: We keep stores as they're linked to Shopify locations
     console.log('✅ Data cleanup completed successfully!');
-    
+
     // Clear cache
     cache.clear();
     console.log('🗑️  Cleared all cache');
@@ -238,7 +238,7 @@ exports.cleanupData = async (req, res) => {
   } catch (error) {
     console.error('❌ Cleanup error:', error);
     console.error('❌ Stack trace:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
       details: 'Failed to cleanup data. Check server logs for details.'
     });
@@ -252,13 +252,13 @@ async function createDemoData(req, res) {
     const productRepo = getProductRepository();
     const inventoryRepo = getInventoryRepository();
     const userRepo = getUserRepository();
-    
+
     console.log('🎭 DEMO MODE: Creating realistic demo stores, products, and inventory...');
-    
+
     // Save user-store assignments (FIXED: Load with try-catch)
     let allUsers = [];
     let userStoreMap = new Map();
-    
+
     try {
       allUsers = await userRepo.find({ relations: ['assignedStore'] });
       for (const user of allUsers) {
@@ -270,7 +270,7 @@ async function createDemoData(req, res) {
       console.warn('⚠️  Could not load user relations, loading without relations:', relationError.message);
       allUsers = await userRepo.find(); // Load without relations as fallback
     }
-    
+
     // Unassign users
     for (const user of allUsers) {
       if (user.assignedStoreId) {
@@ -279,10 +279,10 @@ async function createDemoData(req, res) {
       }
     }
     console.log('✅ Unassigned users from stores');
-    
+
     // 🔥 CRITICAL FIX: Delete in correct order to avoid FK constraint errors
     // Order: Inventory → Products → Stores
-    
+
     // 1. Delete ALL inventory first (has FK to products AND stores)
     try {
       const existingInventory = await inventoryRepo.find();
@@ -293,7 +293,7 @@ async function createDemoData(req, res) {
     } catch (deleteError) {
       console.warn('⚠️  Could not delete inventory:', deleteError.message);
     }
-    
+
     // 2. Delete ALL products (has FK to stores via inventory)
     try {
       const existingProducts = await productRepo.find();
@@ -304,7 +304,7 @@ async function createDemoData(req, res) {
     } catch (deleteError) {
       console.warn('⚠️  Could not delete products:', deleteError.message);
     }
-    
+
     // 3. NOW delete stores (no more FK dependencies)
     try {
       const existingStores = await storeRepo.find();
@@ -315,7 +315,7 @@ async function createDemoData(req, res) {
     } catch (deleteError) {
       console.warn('⚠️  Could not delete stores:', deleteError.message);
     }
-    
+
     // Create demo stores
     const demoStores = [
       { name: 'Delhi Store', location: 'Delhi, India', city: 'Delhi' },
@@ -324,7 +324,7 @@ async function createDemoData(req, res) {
       { name: 'Kolkata Store', location: 'Kolkata, India', city: 'Kolkata' },
       { name: 'Chennai Store', location: 'Chennai, India', city: 'Chennai' }
     ];
-    
+
     const createdStores = [];
     for (const store of demoStores) {
       const storeData = {
@@ -342,23 +342,23 @@ async function createDemoData(req, res) {
         shopifyLocationId: `demo-${Date.now()}-${Math.random()}`,
         isActive: true
       };
-      
+
       const savedStore = await storeRepo.save(storeRepo.create(storeData));
       createdStores.push(savedStore);
       console.log(`✅ Created: ${store.name}`);
     }
-    
+
     // Create demo products
     const categories = ['frame', 'eyeglass', 'sunglass'];
     const brands = ['RayBan', 'Oakley', 'Prada', 'Gucci', 'Versace', 'Tom Ford', 'Carrera'];
     const styles = ['Classic', 'Modern', 'Retro', 'Aviator', 'Wayfarer', 'Round', 'Square'];
-    
+
     const createdProducts = [];
     for (let i = 0; i < 100; i++) {
       const category = categories[Math.floor(Math.random() * categories.length)];
       const brand = brands[Math.floor(Math.random() * brands.length)];
       const style = styles[Math.floor(Math.random() * styles.length)];
-      
+
       const productData = {
         name: `${brand} ${style} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
         sku: `SKU-${Date.now()}-${i}`,
@@ -372,39 +372,39 @@ async function createDemoData(req, res) {
         inventoryItemId: `demo-inv-${i}`,
         isActive: true
       };
-      
+
       const savedProduct = await productRepo.save(productRepo.create(productData));
       createdProducts.push(savedProduct);
     }
-    
+
     console.log(`✅ Created ${createdProducts.length} demo products`);
-    
+
     // Create inventory for each product in each store
     let inventoryCount = 0;
     for (const product of createdProducts) {
       for (const store of createdStores) {
         const quantity = Math.floor(Math.random() * 50); // Random 0-50
-        
+
         const inventoryData = {
           productId: product.id,
           storeId: store.id,
           quantity
         };
-        
+
         await inventoryRepo.save(inventoryRepo.create(inventoryData));
         inventoryCount++;
       }
     }
-    
+
     console.log(`✅ Created ${inventoryCount} inventory records`);
-    
+
     // Re-assign users to stores
     let assignedCount = 0;
     if (userStoreMap.size > 0) {
       for (const [userEmail, storeName] of userStoreMap.entries()) {
         const user = allUsers.find(u => u.email === userEmail);
         const store = createdStores.find(s => s.name === storeName) || createdStores[0];
-        
+
         if (user && store) {
           user.assignedStoreId = store.id;
           await userRepo.save(user);
@@ -413,7 +413,7 @@ async function createDemoData(req, res) {
         }
       }
     }
-    
+
     // 🔥 AGGRESSIVE: Auto-assign ANY cashier without a store to the first store!
     const unassignedCashiers = allUsers.filter(u => u.role === 'cashier' && !u.assignedStoreId);
     if (unassignedCashiers.length > 0 && createdStores.length > 0) {
@@ -425,12 +425,12 @@ async function createDemoData(req, res) {
         console.log(`✅ Auto-assigned: ${cashier.email} -> ${createdStores[0].name}`);
       }
     }
-    
+
     console.log(`✅ Total users assigned to stores: ${assignedCount}`);
-    
+
     // Clear cache
     cache.clear();
-    
+
     res.json({
       message: '🎭 DEMO MODE: Created demo stores, products, and inventory!',
       demoMode: true,
@@ -444,7 +444,7 @@ async function createDemoData(req, res) {
   } catch (error) {
     console.error('❌ Demo data creation error:', error);
     console.error('❌ Stack trace:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       details: 'Failed to create demo data. Check server logs for details.'
@@ -459,37 +459,37 @@ exports.refreshData = async (req, res) => {
     const storeRepo = getStoreRepository();
     const productRepo = getProductRepository();
     const inventoryRepo = getInventoryRepository();
-    
+
     // 🔥 AGGRESSIVE FIX: Check if Shopify credentials are configured
     const hasShopifyCredentials = process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN;
-    
+
     if (!hasShopifyCredentials) {
       console.log('⚠️  DEMO MODE: Shopify credentials not found. Creating demo data...');
       return await createDemoData(req, res);
     }
-    
+
     const syncResults = {
       stores: { synced: 0, names: [] },
-      products: { created: 0, updated: 0 },
+      products: { created: 0, updated: 0, errors: [] },
       inventory: { updated: 0 }
     };
-    
+
     // STEP 1: Sync Stores
     console.log('🔄 Step 1/3: Syncing stores from Shopify...');
-    
+
     // 🔥 NEW APPROACH: UPSERT stores (update if exists, create if not)
     // This preserves database IDs and user-store assignments!
     console.log('✅ Using UPSERT strategy - no data loss!');
-    
+
     // Fetch and create stores from Shopify
     const shopifyLocations = await shopifyService.getLocations();
     console.log(`📍 Found ${shopifyLocations.length} locations in Shopify`);
     shopifyLocations.forEach(loc => {
       console.log(`  - ${loc.name} (ID: ${loc.id}, Active: ${loc.active})`);
     });
-    
+
     const createdStores = [];
-    
+
     for (const location of shopifyLocations) {
       const address = {
         street: location.address1 || '',
@@ -512,8 +512,8 @@ exports.refreshData = async (req, res) => {
       };
 
       // 🔥 UPSERT: Find existing store or create new
-      let store = await storeRepo.findOne({ 
-        where: { shopifyLocationId: location.id.toString() } 
+      let store = await storeRepo.findOne({
+        where: { shopifyLocationId: location.id.toString() }
       });
 
       if (store) {
@@ -530,17 +530,17 @@ exports.refreshData = async (req, res) => {
       createdStores.push(savedStore);
       syncResults.stores.names.push(location.name);
     }
-    
+
     syncResults.stores.synced = shopifyLocations.length;
     console.log(`✅ Step 1/3 Complete: Synced ${syncResults.stores.synced} stores (user assignments preserved!)`);
-    
+
     // ✅ No need to re-assign users - store IDs are preserved with UPSERT!
-    
+
     // STEP 2: Sync Products
     console.log('🔄 Step 2/3: Syncing products from Shopify...');
     const shopifyProducts = await shopifyService.getProducts();
     console.log(`📦 Received ${shopifyProducts.length} products from Shopify`);
-    
+
     // 🔥 DIAGNOSTIC: Check first product's variant structure
     if (shopifyProducts.length > 0 && shopifyProducts[0].variants.length > 0) {
       const sampleVariant = shopifyProducts[0].variants[0];
@@ -553,16 +553,16 @@ exports.refreshData = async (req, res) => {
         has_inventory_item_id: !!sampleVariant.inventory_item_id
       });
     }
-    
+
     let withInventoryId = 0;
     let withoutInventoryId = 0;
-    
+
     for (const shopifyProduct of shopifyProducts) {
       for (const variant of shopifyProduct.variants) {
         try {
           // 🔥 FIX: If inventory_item_id is missing, fetch it from variant endpoint
           let inventoryItemId = variant.inventory_item_id;
-          
+
           if (!inventoryItemId) {
             console.log(`🔍 Fetching missing inventory_item_id for variant ${variant.id}...`);
             try {
@@ -577,7 +577,7 @@ exports.refreshData = async (req, res) => {
               console.error(`❌ Failed to fetch variant ${variant.id}:`, variantError.message);
             }
           }
-          
+
           // 🔥 DIAGNOSTIC: Track inventory IDs
           if (inventoryItemId) {
             withInventoryId++;
@@ -585,24 +585,36 @@ exports.refreshData = async (req, res) => {
             withoutInventoryId++;
             console.warn(`⚠️  Variant ${variant.id} (${shopifyProduct.title}) has NO inventory_item_id!`);
           }
-          
+
           // Clean product name by stripping HTML tags
           const cleanTitle = stripHtmlTags(shopifyProduct.title);
           const cleanVariantTitle = stripHtmlTags(variant.title);
-          
+
+          // Normalize category
+          let category = 'accessory'; // Default
+          const productType = (shopifyProduct.product_type || '').toLowerCase();
+
+          if (productType.includes('sunglass')) {
+            category = 'sunglass';
+          } else if (productType.includes('frame')) {
+            category = 'frame';
+          } else if (productType.includes('eyeglass') || productType.includes('spectacle')) {
+            category = 'eyeglass';
+          }
+
           const productData = {
-            name: cleanVariantTitle === 'Default Title' 
-              ? cleanTitle 
+            name: cleanVariantTitle === 'Default Title'
+              ? cleanTitle
               : `${cleanTitle} - ${cleanVariantTitle}`,
             sku: variant.sku || `SKU-${variant.id}`,
-            category: shopifyProduct.product_type || 'Uncategorized',
+            category,
             price: parseFloat(variant.price) || 0,
             description: shopifyProduct.body_html || '',
             image: shopifyProduct.image?.src || '',
             shopifyProductId: shopifyProduct.id.toString(),
             shopifyVariantId: variant.id.toString(),
             inventoryItemId: inventoryItemId ? inventoryItemId.toString() : null,
-            taxRate: shopifyProduct.product_type?.toLowerCase().includes('sunglass') ? 18 : 5,
+            taxRate: category === 'sunglass' ? 18 : 5,
             isActive: true
           };
 
@@ -621,28 +633,33 @@ exports.refreshData = async (req, res) => {
           }
         } catch (error) {
           console.error(`Error syncing product variant ${variant.id}:`, error.message);
+          syncResults.products.errors.push({
+            variantId: variant.id,
+            product: shopifyProduct.title,
+            error: error.message
+          });
         }
       }
     }
-    
+
     console.log(`✅ Step 2/3 Complete: ${syncResults.products.created} products created, ${syncResults.products.updated} updated`);
     console.log(`📊 Inventory ID Status: ${withInventoryId} WITH inventory_item_id, ${withoutInventoryId} WITHOUT inventory_item_id`);
-    
+
     if (withoutInventoryId > 0) {
       console.error(`❌ CRITICAL: ${withoutInventoryId} variants missing inventory_item_id from Shopify!`);
       console.error('💡 This means Shopify is not returning inventory_item_id in the API response.');
       console.error('💡 This could be due to API version or product configuration.');
     }
-    
+
     // STEP 3: Sync Inventory
     console.log('🔄 Step 3/3: Syncing inventory from Shopify...');
     const products = await productRepo
       .createQueryBuilder('product')
       .where('product.inventoryItemId IS NOT NULL')
       .getMany();
-    
+
     console.log(`📦 Found ${products.length} products with inventory item IDs`);
-    
+
     // 🔥 DIAGNOSTIC: Show sample of products with inventory IDs
     if (products.length > 0) {
       const sample = products.slice(0, 3);
@@ -654,7 +671,7 @@ exports.refreshData = async (req, res) => {
     } else {
       console.error('❌ CRITICAL: No products have inventoryItemId! Sync will fail.');
     }
-    
+
     // Get all inventory item IDs - USE STORED VALUES (AGGRESSIVE FIX!)
     const inventoryItemIds = [];
     const productMap = new Map();
@@ -665,7 +682,7 @@ exports.refreshData = async (req, res) => {
         productMap.set(product.inventoryItemId, product);
       }
     }
-    
+
     console.log(`📦 Collected ${inventoryItemIds.length} inventory item IDs for sync`);
     console.log(`📋 First 5 inventory item IDs: ${inventoryItemIds.slice(0, 5).join(', ')}`);
 
@@ -689,37 +706,37 @@ exports.refreshData = async (req, res) => {
 
       // Create a map of location -> item -> quantity
       const inventoryMap = new Map();
-      
+
       for (const level of inventoryLevels) {
         const locationId = level.location_id.toString();
         const itemId = level.inventory_item_id.toString(); // Convert to string for consistency
-        
+
         if (!inventoryMap.has(locationId)) {
           inventoryMap.set(locationId, new Map());
         }
         inventoryMap.get(locationId).set(itemId, level.available || 0);
       }
-      
+
       console.log(`📊 Organized inventory for ${inventoryMap.size} locations`);
-      
+
       // 🔥 DIAGNOSTIC: Show what locations we have in the map
       console.log('📋 Location IDs in inventory map:', Array.from(inventoryMap.keys()));
 
       // Update inventory for each store
       console.log(`📦 Processing inventory for ${createdStores.length} stores...`);
       console.log('📋 Store IDs we have:', createdStores.map(s => ({ name: s.name, shopifyLocationId: s.shopifyLocationId })));
-      
+
       for (const store of createdStores) {
         console.log(`🔍 Looking for inventory for store: ${store.name} (Shopify Location ID: ${store.shopifyLocationId})`);
         const locationInventory = inventoryMap.get(store.shopifyLocationId);
-        
+
         if (locationInventory) {
           console.log(`📦 Updating ${locationInventory.size} inventory items for ${store.name}...`);
           let storeUpdated = 0;
-          
+
           for (const [inventoryItemId, quantity] of locationInventory.entries()) {
             const product = productMap.get(inventoryItemId);
-            
+
             if (product) {
               try {
                 let inventory = await inventoryRepo.findOne({
@@ -749,7 +766,7 @@ exports.refreshData = async (req, res) => {
               console.warn(`⚠️  No product found for inventory item ID: ${inventoryItemId}`);
             }
           }
-          
+
           console.log(`✅ Updated ${storeUpdated} items for ${store.name}`);
         } else {
           console.warn(`⚠️  No inventory data found for ${store.name} (Location ID: ${store.shopifyLocationId})`);
@@ -758,21 +775,21 @@ exports.refreshData = async (req, res) => {
     } else {
       console.warn('⚠️  No inventory item IDs to sync');
     }
-    
+
     console.log(`✅ Step 3/3 Complete: ${syncResults.inventory.updated} inventory records updated`);
-    
+
     // 🔥 FIX: Create inventory records with 0 quantity for products without inventory_item_id
-    console.log('🔄 Creating inventory records for products without inventory tracking...');
+    console.log('🔄 Creating inventory records for products without inventory tracking...'); 
     const productsWithoutInventoryId = await productRepo
       .createQueryBuilder('product')
       .where('product.inventoryItemId IS NULL')
       .andWhere('product.isActive = :isActive', { isActive: true })
       .getMany();
-    
+
     if (productsWithoutInventoryId.length > 0) {
-      console.log(`📦 Found ${productsWithoutInventoryId.length} products without inventory tracking`);
+      console.log(`📦 Found ${productsWithoutInventoryId.length} products without inventory tracking`); 
       let createdZeroInventory = 0;
-      
+
       for (const product of productsWithoutInventoryId) {
         for (const store of createdStores) {
           try {
@@ -783,7 +800,7 @@ exports.refreshData = async (req, res) => {
                 storeId: store.id
               }
             });
-            
+
             if (!inventory) {
               // Create with 0 quantity
               inventory = inventoryRepo.create({
@@ -799,17 +816,58 @@ exports.refreshData = async (req, res) => {
           }
         }
       }
-      
+
       console.log(`✅ Created ${createdZeroInventory} zero-quantity inventory records`);
     }
-    
+
+    // 🔥 NEW FIX: Ensure ALL products have inventory records for ALL stores
+    console.log('🔄 Step 3.5/3: Ensuring complete inventory coverage for all products...');
+    const allActiveProducts = await productRepo.find({
+      where: { isActive: true }
+    });
+
+    let ensuredInventory = 0;
+    let alreadyExists = 0;
+
+    console.log(`📦 Checking ${allActiveProducts.length} products across ${createdStores.length} stores...`);
+
+    for (const product of allActiveProducts) {
+      for (const store of createdStores) {
+        try {
+          const existingInventory = await inventoryRepo.findOne({
+            where: {
+              productId: product.id,
+              storeId: store.id
+            }
+          });
+
+          if (!existingInventory) {
+            // Create inventory record with 0 quantity
+            const inventory = inventoryRepo.create({
+              productId: product.id,
+              storeId: store.id,
+              quantity: 0
+            });
+            await inventoryRepo.save(inventory);
+            ensuredInventory++;
+          } else {
+            alreadyExists++;
+          }
+        } catch (error) {
+          console.error(`❌ Error ensuring inventory for ${product.name} at ${store.name}:`, error.message);
+        }
+      }
+    }
+
+    console.log(`✅ Step 3.5/3 Complete: Ensured ${ensuredInventory} missing inventory records, ${alreadyExists} already existed`);
+
     // 🔥 DIAGNOSTIC: Verify total inventory for sample products
     console.log('🔍 DIAGNOSTIC: Verifying inventory totals...');
-    const sampleProducts = await productRepo.find({ 
+    const sampleProducts = await productRepo.find({
       take: 3,
       relations: ['inventory', 'inventory.store']
     });
-    
+
     for (const product of sampleProducts) {
       const dbTotal = product.inventory?.reduce((sum, inv) => sum + parseInt(inv.quantity || 0), 0) || 0;
       const locationCount = product.inventory?.length || 0;
@@ -818,7 +876,7 @@ exports.refreshData = async (req, res) => {
         console.log(`   - ${inv.store?.name}: ${inv.quantity} units`);
       });
     }
-    
+
     console.log(`🎉 Full sync completed successfully!`);
 
     // Clear all inventory cache since data has been refreshed
@@ -851,10 +909,10 @@ exports.getDatabaseStatus = async (req, res) => {
 
     // Get stores with details
     const stores = await storeRepo.find();
-    
+
     // Get users with store assignments
     const users = await userRepo.find({ relations: ['assignedStore'] });
-    
+
     // Get inventory grouped by store
     const inventoryByStore = {};
     for (const store of stores) {
@@ -914,27 +972,27 @@ exports.completeSetup = async (req, res) => {
   try {
     console.log('🔥🔥🔥 NUCLEAR FIX: Complete setup starting...');
     console.log('👤 Current user:', req.user);
-    
+
     const storeRepo = getStoreRepository();
     const userRepo = getUserRepository();
     const productRepo = getProductRepository();
-    
+
     // Step 1: Check if we have stores and products
     const storeCount = await storeRepo.count();
     const productCount = await productRepo.count();
-    
+
     console.log('📊 Current state:', { storeCount, productCount });
-    
+
     // Step 2: Sync from Shopify if needed
     if (storeCount === 0 || productCount === 0) {
       console.log('📦 No data found, syncing from Shopify...');
-      
+
       // Check if Shopify credentials are configured
       const hasShopifyCredentials = process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN;
-      
+
       if (hasShopifyCredentials) {
         console.log('✅ Shopify credentials found, syncing real data...');
-        
+
         // Call refreshData to sync from Shopify (internal call)
         const tempRes = {
           json: (data) => {
@@ -948,14 +1006,14 @@ exports.completeSetup = async (req, res) => {
             }
           })
         };
-        
+
         // Use the module's exports to call refreshData
         await exports.refreshData(req, tempRes);
-        
+
         console.log('✅ Shopify data sync completed');
       } else {
         console.log('⚠️  No Shopify credentials, using demo data...');
-        
+
         // Fallback to demo data
         const tempRes = {
           json: (data) => {
@@ -969,33 +1027,33 @@ exports.completeSetup = async (req, res) => {
             }
           })
         };
-        
+
         await createDemoData(req, tempRes);
-        
+
         console.log('✅ Demo data creation completed');
       }
     } else {
       console.log('✅ Data already exists');
     }
-    
+
     // Step 3: Get the current user with latest data
     const currentUser = await userRepo.findOne({
       where: { id: req.user.id },
       relations: ['assignedStore']
     });
-    
+
     console.log('👤 Current user loaded:', {
       email: currentUser.email,
       role: currentUser.role,
       currentStore: currentUser.assignedStore?.name
     });
-    
+
     // Step 4: Auto-assign to first store if cashier has no store
     if (currentUser.role === 'cashier' && !currentUser.assignedStoreId) {
       console.log('🔥 Cashier has no store, auto-assigning...');
-      
+
       const firstStore = await storeRepo.findOne({ where: { isActive: true } });
-      
+
       if (firstStore) {
         currentUser.assignedStoreId = firstStore.id;
         await userRepo.save(currentUser);
@@ -1004,19 +1062,19 @@ exports.completeSetup = async (req, res) => {
         throw new Error('No stores available for assignment');
       }
     }
-    
+
     // Step 5: Reload user with store relation
     const updatedUser = await userRepo.findOne({
       where: { id: currentUser.id },
       relations: ['assignedStore']
     });
-    
+
     console.log('✅ NUCLEAR FIX COMPLETE:', {
       user: updatedUser.email,
       assignedStore: updatedUser.assignedStore?.name,
       storeId: updatedUser.assignedStoreId
     });
-    
+
     // Step 6: Return success
     res.json({
       message: '🔥 COMPLETE SETUP SUCCESS!',
@@ -1031,10 +1089,10 @@ exports.completeSetup = async (req, res) => {
       products: await productRepo.count(),
       instructions: 'Logout and login again to load products!'
     });
-    
+
   } catch (error) {
     console.error('❌ NUCLEAR FIX ERROR:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });

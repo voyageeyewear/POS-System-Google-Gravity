@@ -18,7 +18,7 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     address: {
-      type: 'jsonb',
+      type: 'simple-json',
       nullable: true,
     },
     phone: {
@@ -42,11 +42,11 @@ module.exports = new EntitySchema({
       default: true,
     },
     createdAt: {
-      type: 'timestamp',
+      type: 'datetime',
       createDate: true,
     },
     updatedAt: {
-      type: 'timestamp',
+      type: 'datetime',
       updateDate: true,
     },
   },

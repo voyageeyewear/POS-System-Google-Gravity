@@ -39,7 +39,7 @@ class ShopifyService {
         pageCount++;
         console.log(`📦 Fetching page ${pageCount} (since_id: ${sinceId})...`);
 
-        const params = { 
+        const params = {
           limit,
           since_id: sinceId,
           // Explicitly request all variant fields including inventory_item_id
@@ -48,7 +48,7 @@ class ShopifyService {
 
         const response = await client.get('/products.json', { params });
         const products = response.data.products;
-        
+
         if (products.length === 0) {
           console.log('✅ No more products to fetch');
           break;
@@ -69,7 +69,7 @@ class ShopifyService {
         // Add a small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 500));
       }
-      
+
       console.log(`🎉 Successfully fetched ALL ${allProducts.length} products from Shopify in ${pageCount} pages!`);
       return allProducts;
     } catch (error) {
@@ -80,7 +80,7 @@ class ShopifyService {
         data: error.response?.data,
         url: error.config?.url
       });
-      
+
       if (error.response?.status === 401) {
         throw new Error('Invalid Shopify credentials. Please check your SHOPIFY_ACCESS_TOKEN');
       } else if (error.response?.status === 404) {
@@ -141,27 +141,55 @@ class ShopifyService {
       const client = this.getClient();
       const BATCH_SIZE = 50; // Shopify recommends max 50 inventory items per request
       let allLevels = [];
-      
+
       // Split into batches if necessary
       for (let i = 0; i < inventoryItemIds.length; i += BATCH_SIZE) {
         const batch = inventoryItemIds.slice(i, i + BATCH_SIZE);
         console.log(`📦 Fetching inventory batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(inventoryItemIds.length / BATCH_SIZE)} (${batch.length} items)...`);
-        
-        const response = await client.get('/inventory_levels.json', {
-          params: {
-            inventory_item_ids: batch.join(','),
+
+        // 🔥 FIX: Handle pagination to get ALL inventory levels
+        let pageInfo = null;
+        let batchLevels = [];
+
+        do {
+          let params = {
             limit: 250 // Max results per page
+          };
+
+          // 🔥 CRITICAL: Shopify doesn't allow inventory_item_ids with page_info
+          if (pageInfo) {
+            params.page_info = pageInfo;
+          } else {
+            params.inventory_item_ids = batch.join(',');
           }
-        });
-        
-        allLevels = allLevels.concat(response.data.inventory_levels);
-        
+
+          const response = await client.get('/inventory_levels.json', { params });
+
+          batchLevels = batchLevels.concat(response.data.inventory_levels);
+
+          // Check if there are more pages
+          const linkHeader = response.headers['link'];
+          if (linkHeader && linkHeader.includes('rel="next"')) {
+            // Extract page_info from Link header
+            const nextMatch = linkHeader.match(/<[^>]*[?&]page_info=([^&>]+)[^>]*>;\s*rel="next"/);
+            pageInfo = nextMatch ? nextMatch[1] : null;
+          } else {
+            pageInfo = null;
+          }
+
+          console.log(`   📄 Fetched ${response.data.inventory_levels.length} records (total for this batch: ${batchLevels.length})${pageInfo ? ', fetching next page...' : ''}`);
+
+        } while (pageInfo);
+
+        allLevels = allLevels.concat(batchLevels);
+        console.log(`   ✅ Batch complete: ${batchLevels.length} inventory records`);
+
         // Small delay to avoid rate limiting
         if (i + BATCH_SIZE < inventoryItemIds.length) {
           await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
-      
+
       console.log(`✅ Fetched ${allLevels.length} total inventory level records`);
       return allLevels;
     } catch (error) {

@@ -44,15 +44,15 @@ module.exports = new EntitySchema({
       default: 0,
     },
     lastPurchaseDate: {
-      type: 'timestamp',
+      type: 'datetime',
       nullable: true,
     },
     createdAt: {
-      type: 'timestamp',
+      type: 'datetime',
       createDate: true,
     },
     updatedAt: {
-      type: 'timestamp',
+      type: 'datetime',
       updateDate: true,
     },
   },
