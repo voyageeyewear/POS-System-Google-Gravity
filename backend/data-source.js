@@ -3,13 +3,14 @@ require('dotenv').config();
 const { DataSource } = require('typeorm');
 
 const AppDataSource = new DataSource({
-  type: 'sqlite',
-  database: 'database.sqlite',
+  type: 'postgres',
+  url: process.env.DATABASE_URL,
   synchronize: true, // Auto-create tables (enabled for initial setup)
-  logging: true, // Enable logging to see what's happening
+  logging: process.env.NODE_ENV !== 'production', // Enable logging in development
   entities: ['entities/*.js'],
   migrations: ['migrations/*.js'],
   subscribers: [],
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 module.exports = { AppDataSource };
