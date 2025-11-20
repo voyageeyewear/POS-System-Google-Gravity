@@ -44,10 +44,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize TypeORM and auto-seed if needed
+// Track database initialization status
+let dbInitialized = false;
+let dbError = null;
+
+// Initialize TypeORM in background (don't block server startup)
+console.log('🔄 Starting database initialization...');
 AppDataSource.initialize()
   .then(async () => {
-    console.log('✅ PostgreSQL connected via TypeORM');
+    console.log('✅ Database connected via TypeORM');
 
     // Auto-seed database if no admin user exists
     const userRepo = AppDataSource.getRepository('User');
@@ -108,10 +113,14 @@ AppDataSource.initialize()
         console.log('💡 You can manually sync stores from the admin panel');
       }
     }
+
+    dbInitialized = true;
+    console.log('✅ Database initialization complete');
   })
   .catch((error) => {
-    console.error('❌ TypeORM initialization error:', error);
-    process.exit(1);
+    console.error('❌ Database initialization error:', error);
+    dbError = error;
+    console.log('⚠️  Server will continue running but database operations will fail');
   });
 
 // Parse JSON and URL-encoded bodies
@@ -135,7 +144,13 @@ app.use('/api/diagnostic', diagnosticRoutes); // Diagnostic tools for debugging
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'POS Backend is running', cors: 'enabled' });
+  res.json({
+    status: 'OK',
+    message: 'POS Backend is running',
+    cors: 'enabled',
+    database: dbInitialized ? 'connected' : (dbError ? 'error' : 'initializing'),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // CORS test endpoint
