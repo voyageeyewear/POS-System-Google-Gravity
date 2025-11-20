@@ -48,17 +48,17 @@ app.use((req, res, next) => {
 AppDataSource.initialize()
   .then(async () => {
     console.log('✅ PostgreSQL connected via TypeORM');
-    
+
     // Auto-seed database if no admin user exists
     const userRepo = AppDataSource.getRepository('User');
     const storeRepo = AppDataSource.getRepository('Store');
     const adminCount = await userRepo.count({ where: { role: 'admin' } });
     const storeCount = await storeRepo.count();
-    
+
     if (adminCount === 0) {
       console.log('🌱 No admin user found, running auto-seed...');
       const { UserMethods } = require('./entities/User');
-      
+
       // Create admin user
       const adminPassword = await UserMethods.hashPassword('admin123');
       const admin = userRepo.create({
@@ -71,14 +71,14 @@ AppDataSource.initialize()
       await userRepo.save(admin);
       console.log('✅ Created admin user (admin@pos.com / admin123)');
     }
-    
+
     // Auto-sync stores from Shopify if none exist
     if (storeCount === 0 && process.env.SHOPIFY_SHOP_DOMAIN && process.env.SHOPIFY_ACCESS_TOKEN) {
       console.log('🏪 No stores found, syncing from Shopify...');
       try {
         const shopifyService = require('./utils/shopify');
         const shopifyLocations = await shopifyService.getLocations();
-        
+
         for (const location of shopifyLocations) {
           const address = {
             street: location.address1 || '',
@@ -101,7 +101,7 @@ AppDataSource.initialize()
           const store = storeRepo.create(storeData);
           await storeRepo.save(store);
         }
-        
+
         console.log(`✅ Synced ${shopifyLocations.length} stores from Shopify`);
       } catch (error) {
         console.error('❌ Failed to sync from Shopify:', error.message);
@@ -140,7 +140,7 @@ app.get('/api/health', (req, res) => {
 
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'CORS is working!',
     origin: req.headers.origin,
     timestamp: new Date().toISOString()
@@ -155,7 +155,7 @@ app.options('/api/auth/login', (req, res) => {
 
 // 🚀 Root route - Health check
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'POS System API',
     status: 'running',
     version: '8.0 - Progressive Loading',
@@ -180,17 +180,18 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error('❌ Server error:', err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!', 
+  res.status(500).json({
+    error: 'Something went wrong!',
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server - bind to 0.0.0.0 for Railway
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Listening on 0.0.0.0:${PORT}`);
 });
 
 module.exports = app;
