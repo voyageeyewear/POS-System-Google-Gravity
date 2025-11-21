@@ -165,15 +165,20 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/data-management', dataManagementRoutes);
 app.use('/api/diagnostic', diagnosticRoutes); // Diagnostic tools for debugging
 
-// Health check
+// Health check - Must respond quickly for Railway
 app.get('/api/health', (req, res) => {
-  res.json({
+  console.log('🏥 Health check received');
+  const healthStatus = {
     status: 'OK',
     message: 'POS Backend is running',
     cors: 'enabled',
     database: dbInitialized ? 'connected' : (dbError ? 'error' : 'initializing'),
     timestamp: new Date().toISOString()
-  });
+  };
+  
+  // Always return 200 OK - Railway needs this
+  res.status(200).json(healthStatus);
+  console.log('✅ Health check response sent:', healthStatus.status);
 });
 
 // CORS test endpoint
@@ -191,9 +196,10 @@ app.options('/api/auth/login', (req, res) => {
   res.status(200).end();
 });
 
-// 🚀 Root route - Health check
+// 🚀 Root route - Health check (also used by Railway)
 app.get('/', (req, res) => {
-  res.json({
+  console.log('🏠 Root route accessed');
+  res.status(200).json({
     message: 'POS System API',
     status: 'running',
     version: '8.0 - Progressive Loading',
@@ -204,7 +210,8 @@ app.get('/', (req, res) => {
       stores: '/api/stores',
       sales: '/api/sales',
       inventory: '/api/inventory',
-      dataManagement: '/api/data-management'
+      dataManagement: '/api/data-management',
+      health: '/api/health'
     }
   });
 });
