@@ -15,6 +15,19 @@ const diagnosticRoutes = require('./routes/diagnostic');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  WARNING: JWT_SECRET is not set. Authentication will fail.');
+  console.warn('💡 Please set JWT_SECRET environment variable in Railway.');
+  // Don't exit - allow server to start but log warning
+}
+
+if (!process.env.DATABASE_URL) {
+  console.warn('⚠️  WARNING: DATABASE_URL is not set. Database operations will fail.');
+  console.warn('💡 Please set DATABASE_URL environment variable in Railway.');
+  // Don't exit - allow server to start but log warning
+}
+
 // ========================================
 // AGGRESSIVE CORS CONFIGURATION - FIRST THING!
 // ========================================
