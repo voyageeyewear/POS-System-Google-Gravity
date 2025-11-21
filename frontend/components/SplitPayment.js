@@ -9,10 +9,24 @@ const PAYMENT_METHODS = [
   { value: 'other', label: 'Other' },
 ];
 
+const OTHER_PAYMENT_OPTIONS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'card', label: 'Card' },
+  { value: 'wallet', label: 'Wallet' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'credit', label: 'Credit' },
+  { value: 'other', label: 'Other' },
+];
+
 export default function SplitPayment({ totalAmount, onPaymentChange, initialPayments = null }) {
   const [payments, setPayments] = useState(() => {
     if (initialPayments && initialPayments.length > 0) {
-      return initialPayments;
+      return initialPayments.map(p => ({
+        ...p,
+        otherMethod: p.paymentMethod === 'other' ? (p.otherMethod || 'cash') : undefined
+      }));
     }
     // Default: single cash payment
     return [{ paymentMethod: 'cash', amount: totalAmount || 0 }];
@@ -110,50 +124,82 @@ export default function SplitPayment({ totalAmount, onPaymentChange, initialPaym
       </div>
 
       {payments.map((payment, index) => (
-        <div key={index} className="flex gap-2 items-start">
-          <div className="flex-1">
-            <select
-              value={payment.paymentMethod}
-              onChange={(e) => updatePayment(index, 'paymentMethod', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
-            >
-              {PAYMENT_METHODS.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 relative">
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max={totalAmount}
-              value={payment.amount || ''}
-              onChange={(e) => updateAmount(index, e.target.value)}
-              placeholder="Amount"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
-            />
-            {index === payments.length - 1 && remaining > 0 && (
+        <div key={index} className="space-y-2">
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <select
+                value={payment.paymentMethod}
+                onChange={(e) => {
+                  const newMethod = e.target.value;
+                  updatePayment(index, 'paymentMethod', newMethod);
+                  // If switching away from 'other', clear otherMethod
+                  if (newMethod !== 'other') {
+                    updatePayment(index, 'otherMethod', undefined);
+                  } else if (!payment.otherMethod) {
+                    // If switching to 'other', set default
+                    updatePayment(index, 'otherMethod', 'cash');
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+              >
+                {PAYMENT_METHODS.map((method) => (
+                  <option key={method.value} value={method.value}>
+                    {method.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 relative">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max={totalAmount}
+                value={payment.amount || ''}
+                onChange={(e) => updateAmount(index, e.target.value)}
+                placeholder="Amount"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+              />
+              {index === payments.length - 1 && remaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() => autoFillRemaining(index)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary-600 hover:text-primary-700"
+                >
+                  Fill ₹{remaining.toFixed(2)}
+                </button>
+              )}
+            </div>
+            {payments.length > 1 && (
               <button
                 type="button"
-                onClick={() => autoFillRemaining(index)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary-600 hover:text-primary-700"
+                onClick={() => removePayment(index)}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                title="Remove payment"
               >
-                Fill ₹{remaining.toFixed(2)}
+                <Trash2 size={16} />
               </button>
             )}
           </div>
-          {payments.length > 1 && (
-            <button
-              type="button"
-              onClick={() => removePayment(index)}
-              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-              title="Remove payment"
-            >
-              <Trash2 size={16} />
-            </button>
+          
+          {/* Show sub-option when "Other" is selected */}
+          {payment.paymentMethod === 'other' && (
+            <div className="ml-0">
+              <label className="block text-xs text-gray-600 mb-1">
+                Specify Payment Type:
+              </label>
+              <select
+                value={payment.otherMethod || 'cash'}
+                onChange={(e) => updatePayment(index, 'otherMethod', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm bg-gray-50"
+              >
+                {OTHER_PAYMENT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       ))}
@@ -183,4 +229,3 @@ export default function SplitPayment({ totalAmount, onPaymentChange, initialPaym
     </div>
   );
 }
-

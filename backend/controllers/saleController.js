@@ -161,9 +161,13 @@ exports.createSale = async (req, res) => {
       if (Math.abs(totalPaid - totalAmount) > 0.01) {
         throw new Error(`Payment total (₹${totalPaid.toFixed(2)}) does not match sale total (₹${totalAmount.toFixed(2)})`);
       }
-      paymentAmounts = payments;
+      // Process payments: if paymentMethod is 'other', use otherMethod instead
+      paymentAmounts = payments.map(p => ({
+        paymentMethod: p.paymentMethod === 'other' ? (p.otherMethod || 'cash') : p.paymentMethod,
+        amount: parseFloat(p.amount || 0)
+      }));
       // Use first payment method for backward compatibility
-      finalPaymentMethod = payments[0].paymentMethod;
+      finalPaymentMethod = paymentAmounts[0].paymentMethod;
     } else {
       // Single payment mode (backward compatibility)
       paymentAmounts = [{ paymentMethod: finalPaymentMethod, amount: totalAmount }];
