@@ -50,6 +50,10 @@ let dbError = null;
 
 // Initialize TypeORM in background (don't block server startup)
 console.log('🔄 Starting database initialization...');
+console.log('📊 Database URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
+console.log('📁 Current directory:', __dirname);
+console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+
 AppDataSource.initialize()
   .then(async () => {
     console.log('✅ Database connected via TypeORM');
@@ -119,8 +123,14 @@ AppDataSource.initialize()
   })
   .catch((error) => {
     console.error('❌ Database initialization error:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Stack trace:', error.stack);
     dbError = error;
     console.log('⚠️  Server will continue running but database operations will fail');
+    console.log('💡 Please check:');
+    console.log('   1. DATABASE_URL environment variable is set correctly');
+    console.log('   2. PostgreSQL database is accessible');
+    console.log('   3. Database credentials are valid');
   });
 
 // Parse JSON and URL-encoded bodies

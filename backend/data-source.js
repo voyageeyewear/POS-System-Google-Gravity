@@ -7,8 +7,8 @@ const AppDataSource = new DataSource({
   url: process.env.DATABASE_URL,
   synchronize: true, // Auto-create tables (enabled for initial setup)
   logging: process.env.NODE_ENV !== 'production', // Enable logging in development
-  entities: ['entities/*.js'],
-  migrations: ['migrations/*.js'],
+  entities: [__dirname + '/entities/*.js'],
+  migrations: [__dirname + '/migrations/*.js'],
   subscribers: [],
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
