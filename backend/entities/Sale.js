@@ -56,7 +56,7 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     saleDate: {
-      type: 'datetime',
+      type: 'timestamp',
       default: () => 'CURRENT_TIMESTAMP',
     },
     notes: {
@@ -64,11 +64,11 @@ module.exports = new EntitySchema({
       default: '',
     },
     createdAt: {
-      type: 'datetime',
+      type: 'timestamp',
       createDate: true,
     },
     updatedAt: {
-      type: 'datetime',
+      type: 'timestamp',
       updateDate: true,
     },
   },
