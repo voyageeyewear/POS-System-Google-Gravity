@@ -14,7 +14,8 @@ const diagnosticRoutes = require('./routes/diagnostic');
 
 const app = express();
 // Railway provides PORT via environment variable - must use it
-const PORT = process.env.PORT || 5000;
+// Default to 3000 to match Railway's default, but Railway will override with PORT env var
+const PORT = process.env.PORT || 3000;
 
 // Log port for debugging
 console.log('🔌 PORT from environment:', process.env.PORT);
