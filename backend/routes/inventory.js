@@ -9,9 +9,6 @@ router.use(authenticate);
 // Sync inventory from Shopify (Admin only)
 router.post('/sync/shopify', isAdmin, inventoryController.syncInventoryFromShopify);
 
-// Aggressive inventory resync - clears and rebuilds all inventory (Admin only)
-router.post('/sync/aggressive', isAdmin, inventoryController.aggressiveInventoryResync);
-
 // Get inventory summary
 router.get('/summary', inventoryController.getInventorySummary);
 

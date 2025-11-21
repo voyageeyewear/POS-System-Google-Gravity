@@ -8,7 +8,6 @@ const getProductRepository = () => AppDataSource.getRepository('Product');
 const getCustomerRepository = () => AppDataSource.getRepository('Customer');
 const getStoreRepository = () => AppDataSource.getRepository('Store');
 const getInventoryRepository = () => AppDataSource.getRepository('Inventory');
-const getPaymentRepository = () => AppDataSource.getRepository('Payment');
 
 // Helper function to generate store-specific invoice number
 async function generateInvoiceNumber(storeId) {
@@ -51,8 +50,7 @@ exports.createSale = async (req, res) => {
       storeId,
       items,
       customerInfo,
-      paymentMethod, // For backward compatibility
-      payments, // New: array of { paymentMethod, amount }
+      paymentMethod,
       notes
     } = req.body;
 
@@ -151,28 +149,6 @@ exports.createSale = async (req, res) => {
     // Total is subtotal - discount (tax already included in prices)
     const totalAmount = subtotal - totalDiscount;
 
-    // Handle split payments or single payment (backward compatibility)
-    let finalPaymentMethod = paymentMethod || 'cash';
-    let paymentAmounts = [];
-    
-    if (payments && Array.isArray(payments) && payments.length > 0) {
-      // Split payment mode
-      const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-      if (Math.abs(totalPaid - totalAmount) > 0.01) {
-        throw new Error(`Payment total (₹${totalPaid.toFixed(2)}) does not match sale total (₹${totalAmount.toFixed(2)})`);
-      }
-      // Process payments: if paymentMethod is 'other', use otherMethod instead
-      paymentAmounts = payments.map(p => ({
-        paymentMethod: p.paymentMethod === 'other' ? (p.otherMethod || 'cash') : p.paymentMethod,
-        amount: parseFloat(p.amount || 0)
-      }));
-      // Use first payment method for backward compatibility
-      finalPaymentMethod = paymentAmounts[0].paymentMethod;
-    } else {
-      // Single payment mode (backward compatibility)
-      paymentAmounts = [{ paymentMethod: finalPaymentMethod, amount: totalAmount }];
-    }
-
     // Generate invoice number
     const invoiceNumber = await generateInvoiceNumber(parseInt(storeId));
 
@@ -187,22 +163,11 @@ exports.createSale = async (req, res) => {
       totalDiscount,
       totalTax,
       totalAmount,
-      paymentMethod: finalPaymentMethod, // Keep for backward compatibility
+      paymentMethod,
       notes: notes || ''
     });
 
     await saleRepo.save(sale);
-
-    // Create payment records
-    const paymentRepo = queryRunner.manager.getRepository('Payment');
-    for (const payment of paymentAmounts) {
-      const paymentRecord = paymentRepo.create({
-        saleId: sale.id,
-        paymentMethod: payment.paymentMethod,
-        amount: parseFloat(payment.amount)
-      });
-      await paymentRepo.save(paymentRecord);
-    }
 
     // Create sale items
     const saleItemRepo = queryRunner.manager.getRepository('SaleItem');
@@ -225,7 +190,7 @@ exports.createSale = async (req, res) => {
     // Load full sale data for response
     const completeSale = await getSaleRepository().findOne({
       where: { id: sale.id },
-      relations: ['store', 'cashier', 'customer', 'items', 'payments']
+      relations: ['store', 'cashier', 'customer', 'items']
     });
 
     res.status(201).json({
@@ -252,8 +217,7 @@ exports.getAllSales = async (req, res) => {
       .leftJoinAndSelect('sale.store', 'store')
       .leftJoinAndSelect('sale.cashier', 'cashier')
       .leftJoinAndSelect('sale.customer', 'customer')
-      .leftJoinAndSelect('sale.items', 'items')
-      .leftJoinAndSelect('sale.payments', 'payments');
+      .leftJoinAndSelect('sale.items', 'items');
 
     // Role-based filtering
     if (req.user.role === 'cashier' && req.user.assignedStore) {
@@ -293,7 +257,7 @@ exports.getSale = async (req, res) => {
     
     const sale = await saleRepo.findOne({
       where: { id: parseInt(saleId) },
-      relations: ['store', 'cashier', 'customer', 'items', 'items.product', 'payments']
+      relations: ['store', 'cashier', 'customer', 'items', 'items.product']
     });
 
     if (!sale) {
@@ -322,7 +286,7 @@ exports.generateInvoice = async (req, res) => {
     
     const sale = await saleRepo.findOne({
       where: { id: parseInt(saleId) },
-      relations: ['store', 'customer', 'items', 'items.product', 'payments']  // ✅ Load product info and payments
+      relations: ['store', 'customer', 'items', 'items.product']  // ✅ Load product info
     });
 
     if (!sale) {

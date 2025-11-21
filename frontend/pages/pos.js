@@ -5,7 +5,6 @@ import Layout from '../components/Layout';
 import ProductCard from '../components/ProductCard';
 import CartItem from '../components/CartItem';
 import CustomerModal from '../components/CustomerModal';
-import SplitPayment from '../components/SplitPayment';
 import { storeAPI, saleAPI, authAPI, productAPI } from '../utils/api';
 import { Search, ShoppingCart, CreditCard, Receipt, RefreshCw, X, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,9 +21,7 @@ export default function POS() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash'); // For backward compatibility
-  const [splitPayments, setSplitPayments] = useState([]);
-  const [totalPaid, setTotalPaid] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -358,27 +355,7 @@ export default function POS() {
     setShowCustomerModal(true);
   };
 
-  const handlePaymentChange = (payments, totalPaid) => {
-    setSplitPayments(payments);
-    setTotalPaid(totalPaid);
-    // For backward compatibility, set paymentMethod to first payment
-    if (payments.length > 0) {
-      setPaymentMethod(payments[0].paymentMethod);
-    }
-  };
-
   const handleCustomerSubmit = async (customerInfo) => {
-    // Validate split payments
-    const totals = calculateTotals();
-    if (splitPayments.length > 0) {
-      const totalPaidAmount = splitPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-      if (Math.abs(totalPaidAmount - totals.total) > 0.01) {
-        toast.error(`Payment total (₹${totalPaidAmount.toFixed(2)}) must equal sale total (₹${totals.total.toFixed(2)})`);
-        setProcessing(false);
-        return;
-      }
-    }
-
     setProcessing(true);
     try {
       const saleData = {
@@ -401,8 +378,7 @@ export default function POS() {
           };
         }),
         customerInfo,
-        // Send split payments if available, otherwise use single paymentMethod for backward compatibility
-        ...(splitPayments.length > 0 ? { payments: splitPayments } : { paymentMethod }),
+        paymentMethod,
       };
 
       console.log('%c🚀 SALE DATA BEING SENT:', 'background: #ff0; color: #000; font-size: 16px; padding: 5px;');
@@ -971,12 +947,21 @@ export default function POS() {
                   </div>
                 </div>
 
-                {/* Payment Method - Split Payment Support */}
+                {/* Payment Method */}
                 <div className="mb-4">
-                  <SplitPayment
-                    totalAmount={totals.total}
-                    onPaymentChange={handlePaymentChange}
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI</option>
+                    <option value="card">Card</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
 
                 {/* Checkout Button */}

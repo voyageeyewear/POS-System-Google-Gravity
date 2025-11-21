@@ -93,11 +93,6 @@ module.exports = new EntitySchema({
       target: 'SaleItem',
       inverseSide: 'sale',
     },
-    payments: {
-      type: 'one-to-many',
-      target: 'Payment',
-      inverseSide: 'sale',
-    },
   },
   indices: [
     {

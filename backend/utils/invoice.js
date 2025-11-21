@@ -618,30 +618,8 @@ class InvoiceGenerator {
         doc.font('Helvetica');
         doc.text(amountInWords(grandTotalTax), margin, itemY + 12);
 
-        // ===== PAYMENT INFORMATION =====
-        itemY += 40;
-        doc.font('Helvetica-Bold').fontSize(9);
-        doc.text('Payment Details:', margin, itemY);
-        doc.font('Helvetica').fontSize(8);
-        
-        // Check if split payments exist
-        if (sale.payments && sale.payments.length > 0) {
-          let paymentY = itemY + 15;
-          sale.payments.forEach((payment, index) => {
-            const methodLabel = payment.paymentMethod.charAt(0).toUpperCase() + payment.paymentMethod.slice(1);
-            doc.text(`${methodLabel}: ₹${parseFloat(payment.amount).toFixed(2)}`, margin, paymentY);
-            paymentY += 12;
-          });
-          itemY = paymentY + 10;
-        } else {
-          // Single payment (backward compatibility)
-          const methodLabel = (sale.paymentMethod || 'Cash').charAt(0).toUpperCase() + (sale.paymentMethod || 'Cash').slice(1);
-          doc.text(`Payment Method: ${methodLabel}`, margin, itemY + 15);
-          itemY += 35;
-        }
-
         // ===== FOOTER =====
-        itemY += 50; // Spacing before footer
+        itemY += 100; // Increased margin-top to 100px (50px extra spacing)
         
         // Bank Details (Left)
         doc.fontSize(9).font('Helvetica-Bold');
