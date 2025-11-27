@@ -33,6 +33,10 @@ module.exports = new EntitySchema({
       type: 'int',
       default: 18,
     },
+    hsnCode: {
+      type: 'varchar',
+      nullable: true,
+    },
     description: {
       type: 'text',
       default: '',
