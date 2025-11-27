@@ -30,6 +30,15 @@ class ReceiptGenerator {
 
         let yPos = margin;
 
+        // Voyage Logo (centered at top)
+        const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
+        if (fs.existsSync(logoPath)) {
+          const logoWidth = 40; // Small logo for 90mm receipt
+          const logoX = (receiptWidth - logoWidth) / 2; // Center horizontally
+          doc.image(logoPath, logoX, yPos, { width: logoWidth });
+          yPos += logoWidth + 8; // Add space after logo
+        }
+
         // Store Header
         doc.fontSize(18).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
