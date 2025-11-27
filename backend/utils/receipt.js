@@ -35,11 +35,11 @@ class ReceiptGenerator {
         
         if (fs.existsSync(logoPath)) {
           try {
-            // Use maximum width that fits receipt (90mm = ~255 points, leave 20px margin on each side)
-            const maxLogoWidth = receiptWidth - (margin * 2) - 20; // ~215 points max
+            // Use slightly reduced width for better spacing (90mm = ~255 points)
+            const maxLogoWidth = receiptWidth - (margin * 2) - 40; // ~195 points (reduced from 215)
             // Logo is portrait (2480x3508), so height will be calculated to maintain aspect ratio
             // Aspect ratio: 3508/2480 ≈ 1.414 (height is 1.414x width)
-            const logoWidth = maxLogoWidth; // Use almost full width
+            const logoWidth = maxLogoWidth; // Slightly smaller than before
             const logoHeight = logoWidth * 1.414; // Maintain aspect ratio (portrait)
             
             const logoX = (receiptWidth - logoWidth) / 2; // Center horizontally
