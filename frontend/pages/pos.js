@@ -6,7 +6,6 @@ import ProductCard from '../components/ProductCard';
 import CartItem from '../components/CartItem';
 import CustomerModal from '../components/CustomerModal';
 import SplitPaymentModal from '../components/SplitPaymentModal';
-import InvoiceReceipt from '../components/InvoiceReceipt';
 import { storeAPI, saleAPI, authAPI, productAPI } from '../utils/api';
 import { Search, ShoppingCart, CreditCard, Receipt, RefreshCw, X, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,8 +23,6 @@ export default function POS() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [completedSale, setCompletedSale] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentMode, setPaymentMode] = useState(null); // 'Cash', 'Card', 'UPI', 'Other', 'Split'
   const [paymentDetails, setPaymentDetails] = useState(null); // { cash: 1000, card: 1000, upi: 1000 }

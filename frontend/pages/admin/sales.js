@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from '../../components/AdminLayout';
-import InvoiceReceipt from '../../components/InvoiceReceipt';
 import { Download, Filter, TrendingUp, DollarSign, Edit, Plus, Trash, X, Search, Receipt } from 'lucide-react';
 import { saleAPI, storeAPI, productAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -31,9 +30,6 @@ export default function SalesReports() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   
-  // Receipt modal
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [selectedSale, setSelectedSale] = useState(null);
 
   useEffect(() => {
     if (!loading) {
