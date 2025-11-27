@@ -57,9 +57,15 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
               justify-content: space-between;
               margin-bottom: 5px;
               font-size: 13px;
+              gap: 10px;
             }
             .info-label {
               font-weight: 600;
+              flex-shrink: 0;
+            }
+            .info-value {
+              text-align: right;
+              flex-shrink: 0;
             }
             .items-section {
               border-top: 1px solid #ddd;
@@ -72,10 +78,11 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
               justify-content: space-between;
               margin-bottom: 8px;
               font-size: 13px;
+              gap: 8px;
             }
             .item-name {
               flex: 1;
-              margin-right: 10px;
+              min-width: 0;
             }
             .item-qty {
               margin-right: 10px;
@@ -83,7 +90,8 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
             }
             .item-price {
               text-align: right;
-              min-width: 80px;
+              min-width: 70px;
+              flex-shrink: 0;
             }
             .totals-section {
               margin-top: 15px;
@@ -93,6 +101,7 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
               justify-content: space-between;
               margin-bottom: 8px;
               font-size: 14px;
+              gap: 10px;
             }
             .total-label {
               font-weight: 600;
@@ -223,22 +232,22 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
             <div className="receipt-info">
               <div className="info-row">
                 <span className="info-label">Invoice #:</span>
-                <span>{sale.invoiceNumber}</span>
+                <span className="info-value">{sale.invoiceNumber}</span>
               </div>
               <div className="info-row">
                 <span className="info-label">Date:</span>
-                <span>{new Date(sale.saleDate || sale.createdAt).toLocaleString()}</span>
+                <span className="info-value">{new Date(sale.saleDate || sale.createdAt).toLocaleString()}</span>
               </div>
               {customer && (
                 <>
                   <div className="info-row">
                     <span className="info-label">Customer:</span>
-                    <span>{customer.name}</span>
+                    <span className="info-value">{customer.name}</span>
                   </div>
                   {customer.phone && (
                     <div className="info-row">
                       <span className="info-label">Phone:</span>
-                      <span>{customer.phone}</span>
+                      <span className="info-value">{customer.phone}</span>
                     </div>
                   )}
                 </>
