@@ -62,9 +62,24 @@ class ReceiptGenerator {
         // Invoice Info
         doc.fontSize(9);
         const infoLabels = ['Invoice #:', 'Date:', 'Customer:', 'Phone:'];
+        
+        // Format date to avoid AM/PM overlay - format as single line
+        const saleDate = new Date(sale.saleDate || sale.createdAt);
+        const day = String(saleDate.getDate()).padStart(2, '0');
+        const month = String(saleDate.getMonth() + 1).padStart(2, '0');
+        const year = saleDate.getFullYear();
+        let hours = saleDate.getHours();
+        const minutes = String(saleDate.getMinutes()).padStart(2, '0');
+        const seconds = String(saleDate.getSeconds()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const hoursStr = String(hours).padStart(2, '0');
+        const formattedDate = `${day}/${month}/${year}, ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        
         const infoValues = [
           sale.invoiceNumber,
-          new Date(sale.saleDate || sale.createdAt).toLocaleString(),
+          formattedDate,
           customer?.name || 'N/A',
           customer?.phone || 'N/A'
         ];
