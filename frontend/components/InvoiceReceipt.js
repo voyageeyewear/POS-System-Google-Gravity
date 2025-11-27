@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { Printer, X, Download } from 'lucide-react';
+import { saleAPI } from '../utils/api';
+import toast from 'react-hot-toast';
 
 export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer }) {
   const receiptRef = useRef(null);
@@ -168,9 +170,25 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
     }, 250);
   };
 
-  const handleDownload = () => {
-    // Trigger print dialog which can also save as PDF
-    handlePrint();
+  const handleDownload = async () => {
+    try {
+      // Download receipt PDF from backend
+      const receiptResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+      const url = window.URL.createObjectURL(new Blob([receiptResponse.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${sale.invoiceNumber}-receipt.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Receipt downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast.error('Failed to download receipt');
+      // Fallback to print if download fails
+      handlePrint();
+    }
   };
 
   // Parse paymentDetails if it's a string
@@ -334,8 +352,15 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
         {/* Action Buttons */}
         <div className="p-4 border-t flex gap-2 no-print">
           <button
-            onClick={handlePrint}
+            onClick={handleDownload}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Download size={18} />
+            Download Receipt
+          </button>
+          <button
+            onClick={handlePrint}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
             <Printer size={18} />
             Print Receipt
