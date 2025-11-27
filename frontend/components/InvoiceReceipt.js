@@ -173,7 +173,7 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
   const handleDownload = async () => {
     try {
       // Download receipt PDF from backend
-      const receiptResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+      const receiptResponse = await saleAPI.downloadReceipt(sale.id || sale._id);
       const url = window.URL.createObjectURL(new Blob([receiptResponse.data]));
       const link = document.createElement('a');
       link.href = url;

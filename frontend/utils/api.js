@@ -80,6 +80,11 @@ export const saleAPI = {
       responseType: 'blob',
     });
   },
+  downloadReceipt: (saleId) => {
+    return api.get(`/sales/${saleId}/receipt`, {
+      responseType: 'blob',
+    });
+  },
   update: (saleId, data) => api.put(`/sales/${saleId}`, data),
   delete: (saleId) => api.delete(`/sales/${saleId}`),
 };

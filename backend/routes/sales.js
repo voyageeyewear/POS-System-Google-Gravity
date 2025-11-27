@@ -18,6 +18,9 @@ router.get('/:saleId', saleController.getSale);
 // Generate invoice
 router.get('/:saleId/invoice', saleController.generateInvoice);
 
+// Generate receipt
+router.get('/:saleId/receipt', saleController.generateReceipt);
+
 // Update/Edit sale (Admin only)
 router.put('/:saleId', isAdmin, saleController.updateSale);
 
