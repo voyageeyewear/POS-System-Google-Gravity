@@ -28,8 +28,8 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
               background: white;
             }
             .receipt-container {
-              width: 100mm;
-              max-width: 100mm;
+              width: 90mm;
+              max-width: 90mm;
               margin: 0 auto;
               background: white;
             }
@@ -131,13 +131,13 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
                 margin: 0;
               }
               .receipt-container {
-                width: 100mm;
-                max-width: 100mm;
+                width: 90mm;
+                max-width: 90mm;
                 margin: 0 auto;
                 padding: 0;
               }
               @page {
-                size: 100mm auto;
+                size: 90mm auto;
                 margin: 0;
               }
               .no-print {
@@ -201,7 +201,7 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
 
         {/* Receipt Content */}
         <div ref={receiptRef} className="px-0 py-6">
-          <div className="receipt-container" style={{ width: '100mm', margin: '0 auto' }}>
+          <div className="receipt-container" style={{ width: '90mm', margin: '0 auto' }}>
             {/* Store Header */}
             <div className="receipt-header">
               <div className="store-name">{store?.name || 'Voyage Eyewear'}</div>
