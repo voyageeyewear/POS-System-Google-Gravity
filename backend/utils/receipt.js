@@ -95,7 +95,7 @@ class ReceiptGenerator {
           // Handle long item names
           const lines = doc.heightOfString(itemName, { width: contentWidth - 70 });
           doc.text(itemName, margin, yPos, { width: contentWidth - 70 });
-          doc.text(`₹${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
+          doc.text(`Rs.${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
           yPos += Math.max(lines, 12);
         });
 
@@ -106,18 +106,18 @@ class ReceiptGenerator {
         // Totals
         doc.fontSize(9);
         doc.font('Helvetica-Bold').text('Subtotal:', margin, yPos);
-        doc.font('Helvetica').text(`₹${parseFloat(sale.subtotal || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
+        doc.font('Helvetica').text(`Rs.${parseFloat(sale.subtotal || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
         yPos += 12;
 
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.font('Helvetica-Bold').text('Discount:', margin, yPos);
-          doc.font('Helvetica').fillColor('green').text(`-₹${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
+          doc.font('Helvetica').fillColor('green').text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
           doc.fillColor('black');
           yPos += 12;
         }
 
         doc.font('Helvetica-Bold').text('Tax:', margin, yPos);
-        doc.font('Helvetica').text(`₹${parseFloat(sale.totalTax || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
+        doc.font('Helvetica').text(`Rs.${parseFloat(sale.totalTax || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
         yPos += 12;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
@@ -125,7 +125,7 @@ class ReceiptGenerator {
 
         doc.fontSize(12).font('Helvetica-Bold');
         doc.text('Total:', margin, yPos);
-        doc.text(`₹${parseFloat(sale.totalAmount || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
+        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
         yPos += 15;
 
         // Payment Mode
@@ -150,15 +150,15 @@ class ReceiptGenerator {
           yPos += 12;
           doc.font('Helvetica').fontSize(8);
           if (paymentDetails.cash > 0) {
-            doc.text(`Cash: ₹${parseFloat(paymentDetails.cash).toFixed(2)}`, margin + 10, yPos);
+            doc.text(`Cash: Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, margin + 10, yPos);
             yPos += 10;
           }
           if (paymentDetails.card > 0) {
-            doc.text(`Card: ₹${parseFloat(paymentDetails.card).toFixed(2)}`, margin + 10, yPos);
+            doc.text(`Card: Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, margin + 10, yPos);
             yPos += 10;
           }
           if (paymentDetails.upi > 0) {
-            doc.text(`UPI: ₹${parseFloat(paymentDetails.upi).toFixed(2)}`, margin + 10, yPos);
+            doc.text(`UPI: Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, margin + 10, yPos);
             yPos += 10;
           }
         }
