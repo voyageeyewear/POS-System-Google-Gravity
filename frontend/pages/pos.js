@@ -1103,20 +1103,6 @@ export default function POS() {
         onConfirm={handleSplitPaymentConfirm}
       />
 
-      {/* Invoice Receipt Modal */}
-      {completedSale && (
-        <InvoiceReceipt
-          isOpen={showReceipt}
-          onClose={() => {
-            setShowReceipt(false);
-            setCompletedSale(null);
-          }}
-          sale={completedSale}
-          store={user?.assignedStore}
-          customer={completedSale.customer}
-        />
-      )}
-
       {/* Floating Dashboard Button - Hide when products are selected */}
       {selectedProducts.length === 0 && (
         <button

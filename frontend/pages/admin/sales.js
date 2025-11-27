@@ -841,19 +841,6 @@ export default function SalesReports() {
         </div>
         )}
 
-        {/* Invoice Receipt Modal */}
-        {selectedSale && (
-          <InvoiceReceipt
-            isOpen={showReceipt}
-            onClose={() => {
-              setShowReceipt(false);
-              setSelectedSale(null);
-            }}
-            sale={selectedSale}
-            store={selectedSale.store}
-            customer={selectedSale.customer}
-          />
-        )}
       </AdminLayout>
     );
   }
