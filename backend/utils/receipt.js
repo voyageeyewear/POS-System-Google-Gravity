@@ -30,22 +30,28 @@ class ReceiptGenerator {
 
         let yPos = margin;
 
-        // Voyage Logo (centered at top)
+        // Voyage Logo (centered at top) - Use larger size, maintain aspect ratio
         const logoPath = path.resolve(__dirname, '../assets/voyage-logo.png');
         
         if (fs.existsSync(logoPath)) {
           try {
-            const logoWidth = 70; // Increased size for better visibility on 90mm receipt
+            // Use maximum width that fits receipt (90mm = ~255 points, leave 20px margin on each side)
+            const maxLogoWidth = receiptWidth - (margin * 2) - 20; // ~215 points max
+            // Logo is portrait (2480x3508), so height will be calculated to maintain aspect ratio
+            // Aspect ratio: 3508/2480 ≈ 1.414 (height is 1.414x width)
+            const logoWidth = maxLogoWidth; // Use almost full width
+            const logoHeight = logoWidth * 1.414; // Maintain aspect ratio (portrait)
+            
             const logoX = (receiptWidth - logoWidth) / 2; // Center horizontally
             
-            // Add logo - PDFKit handles images synchronously
+            // Add logo at larger size maintaining aspect ratio
             doc.image(logoPath, logoX, yPos, { 
               width: logoWidth,
-              height: logoWidth // Make it square to ensure it displays
+              height: logoHeight // Maintain actual aspect ratio
             });
             
             // Move yPos down by logo height plus spacing
-            yPos += logoWidth + 12;
+            yPos += logoHeight + 12;
           } catch (error) {
             console.error('❌ Error adding logo to receipt:', error.message);
             console.error('Logo path attempted:', logoPath);
