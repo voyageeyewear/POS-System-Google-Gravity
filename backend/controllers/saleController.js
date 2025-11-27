@@ -1,6 +1,5 @@
 const { AppDataSource } = require('../data-source');
 const invoiceGenerator = require('../utils/invoice');
-const receiptGenerator = require('../utils/receipt');
 
 // Get repositories
 const getSaleRepository = () => AppDataSource.getRepository('Sale');
@@ -228,7 +227,7 @@ exports.createSale = async (req, res) => {
     // Load full sale data for response
     const completeSale = await getSaleRepository().findOne({
       where: { id: sale.id },
-      relations: ['store', 'cashier', 'customer', 'items', 'items.product']
+      relations: ['store', 'cashier', 'customer', 'items']
     });
     
     // Parse paymentDetails if it's a string (JSONB from database)
@@ -403,60 +402,6 @@ exports.generateInvoice = async (req, res) => {
     // Return detailed error message
     res.status(400).json({ 
       error: error.message || 'Failed to generate invoice',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-};
-
-// Generate receipt (90mm thermal printer format)
-exports.generateReceipt = async (req, res) => {
-  try {
-    const { saleId } = req.params;
-    const saleRepo = getSaleRepository();
-    
-    console.log(`📄 Generating receipt for sale ID: ${saleId}`);
-    
-    const sale = await saleRepo.findOne({
-      where: { id: parseInt(saleId) },
-      relations: ['store', 'customer', 'items', 'items.product'],
-      select: ['id', 'invoiceNumber', 'storeId', 'cashierId', 'customerId', 'subtotal', 'totalDiscount', 'totalTax', 'totalAmount', 'paymentMethod', 'paymentMode', 'paymentDetails', 'saleDate', 'notes', 'createdAt', 'updatedAt']
-    });
-    
-    // Parse paymentDetails if it's a string
-    if (sale && sale.paymentDetails && typeof sale.paymentDetails === 'string') {
-      try {
-        sale.paymentDetails = JSON.parse(sale.paymentDetails);
-      } catch (e) {
-        console.error('Error parsing paymentDetails:', e);
-      }
-    }
-
-    if (!sale) {
-      console.error(`❌ Sale not found: ${saleId}`);
-      return res.status(404).json({ error: 'Sale not found' });
-    }
-
-    // Check access
-    if (req.user.role === 'cashier' && 
-        req.user.assignedStore &&
-        sale.storeId !== req.user.assignedStore.id) {
-      console.error(`❌ Access denied for cashier: ${req.user.email}`);
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    console.log(`🔄 Generating PDF receipt...`);
-    const filePath = await receiptGenerator.generateReceipt(
-      sale,
-      sale.store,
-      sale.customer
-    );
-
-    console.log(`✅ Receipt generated: ${filePath}`);
-    res.download(filePath, `${sale.invoiceNumber}-receipt.pdf`);
-  } catch (error) {
-    console.error('❌ Receipt generation error:', error);
-    res.status(400).json({ 
-      error: error.message || 'Failed to generate receipt',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }

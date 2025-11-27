@@ -73,50 +73,6 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
               padding: 10px 0;
               margin: 15px 0;
             }
-            .hsn-table {
-              margin-top: 15px;
-              border-top: 1px solid #ddd;
-              padding-top: 10px;
-            }
-            .hsn-table-header {
-              font-weight: bold;
-              font-size: 11px;
-              display: grid;
-              grid-template-columns: 0.8fr 2fr 0.5fr 0.8fr 1fr 0.6fr 0.8fr;
-              gap: 4px;
-              margin-bottom: 5px;
-              text-align: center;
-            }
-            .hsn-table-row {
-              font-size: 10px;
-              display: grid;
-              grid-template-columns: 0.8fr 2fr 0.5fr 0.8fr 1fr 0.6fr 0.8fr;
-              gap: 4px;
-              margin-bottom: 3px;
-              text-align: center;
-            }
-            .hsn-col-hsn {
-              text-align: left;
-            }
-            .hsn-col-desc {
-              text-align: left;
-              word-wrap: break-word;
-            }
-            .hsn-col-qty {
-              text-align: center;
-            }
-            .hsn-col-rate {
-              text-align: right;
-            }
-            .hsn-col-taxable {
-              text-align: right;
-            }
-            .hsn-col-taxrate {
-              text-align: center;
-            }
-            .hsn-col-tax {
-              text-align: right;
-            }
             .item-row {
               display: flex;
               justify-content: space-between;
@@ -324,41 +280,6 @@ export default function InvoiceReceipt({ isOpen, onClose, sale, store, customer 
                 );
               })}
             </div>
-
-            {/* HSN/SAC Table */}
-            {sale.items && sale.items.length > 0 && (
-              <div className="hsn-table">
-                <div className="hsn-table-header">
-                  <div className="hsn-col-hsn">HSN/SAC</div>
-                  <div className="hsn-col-desc">Description</div>
-                  <div className="hsn-col-qty">Qty</div>
-                  <div className="hsn-col-rate">Rate</div>
-                  <div className="hsn-col-taxable">Taxable</div>
-                  <div className="hsn-col-taxrate">Tax%</div>
-                  <div className="hsn-col-tax">Tax</div>
-                </div>
-                {sale.items.map((item, index) => {
-                  const unitPrice = parseFloat(item.discountedPrice || item.unitPrice || 0);
-                  const quantity = parseInt(item.quantity || 1);
-                  const taxableValue = (unitPrice * quantity).toFixed(2);
-                  const taxRate = item.taxRate || 0;
-                  const taxAmount = parseFloat(item.taxAmount || (unitPrice * quantity * taxRate / 100)).toFixed(2);
-                  const hsnCode = item.product?.hsnCode || item.hsnCode || (item.category === 'sunglass' ? '9004' : item.category === 'frame' ? '9003' : '9004');
-                  
-                  return (
-                    <div key={index} className="hsn-table-row">
-                      <div className="hsn-col-hsn">{hsnCode}</div>
-                      <div className="hsn-col-desc">{item.name || item.productName || `Item ${index + 1}`}</div>
-                      <div className="hsn-col-qty">{quantity}</div>
-                      <div className="hsn-col-rate">₹{unitPrice.toFixed(2)}</div>
-                      <div className="hsn-col-taxable">₹{taxableValue}</div>
-                      <div className="hsn-col-taxrate">{taxRate}%</div>
-                      <div className="hsn-col-tax">₹{taxAmount}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
 
             {/* Totals */}
             <div className="totals-section">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from '../../components/AdminLayout';
+import InvoiceReceipt from '../../components/InvoiceReceipt';
 import { Download, Filter, TrendingUp, DollarSign, Edit, Plus, Trash, X, Search, Receipt } from 'lucide-react';
 import { saleAPI, storeAPI, productAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -30,6 +31,9 @@ export default function SalesReports() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   
+  // Receipt modal
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   useEffect(() => {
     if (!loading) {
@@ -520,22 +524,16 @@ export default function SalesReports() {
                       <button
                         onClick={async () => {
                           try {
-                            const receiptResponse = await saleAPI.downloadReceipt(sale.id);
-                            const url = window.URL.createObjectURL(new Blob([receiptResponse.data]));
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.setAttribute('download', `${sale.invoiceNumber}-receipt.pdf`);
-                            document.body.appendChild(link);
-                            link.click();
-                            link.remove();
-                            toast.success('Receipt downloaded');
+                            const saleResponse = await saleAPI.getOne(sale.id);
+                            setSelectedSale(saleResponse.data.sale);
+                            setShowReceipt(true);
                           } catch (error) {
-                            toast.error('Failed to download receipt');
+                            toast.error('Failed to load receipt');
                             console.error(error);
                           }
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
-                        title="Download Receipt"
+                        title="View Receipt"
                       >
                         <Receipt className="w-4 h-4 text-green-600" />
                       </button>
@@ -841,6 +839,19 @@ export default function SalesReports() {
         </div>
         )}
 
+        {/* Invoice Receipt Modal */}
+        {selectedSale && (
+          <InvoiceReceipt
+            isOpen={showReceipt}
+            onClose={() => {
+              setShowReceipt(false);
+              setSelectedSale(null);
+            }}
+            sale={selectedSale}
+            store={selectedSale.store}
+            customer={selectedSale.customer}
+          />
+        )}
       </AdminLayout>
     );
   }
