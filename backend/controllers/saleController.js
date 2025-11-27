@@ -227,7 +227,7 @@ exports.createSale = async (req, res) => {
     // Load full sale data for response
     const completeSale = await getSaleRepository().findOne({
       where: { id: sale.id },
-      relations: ['store', 'cashier', 'customer', 'items']
+      relations: ['store', 'cashier', 'customer', 'items', 'items.product']
     });
     
     // Parse paymentDetails if it's a string (JSONB from database)
