@@ -79,6 +79,10 @@ class ReceiptGenerator {
           doc.text(`Email: ${store.email}`, margin, yPos, { width: contentWidth, align: 'center' });
           yPos += 10;
         }
+        // GST Number (use store GST or default)
+        const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ'; // Default GST from invoice
+        doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
+        yPos += 10;
 
         yPos += 5;
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
