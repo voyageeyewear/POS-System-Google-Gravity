@@ -60,10 +60,10 @@ class ReceiptGenerator {
         yPos += 10;
 
         // Invoice Info
-        doc.fontSize(9);
+        doc.fontSize(8); // Smaller font to fit more on one line
         const infoLabels = ['Invoice #:', 'Date:', 'Customer:', 'Phone:'];
         
-        // Format date to avoid AM/PM overlay - format as single line
+        // Format date to avoid AM/PM overlay - format as compact single line
         const saleDate = new Date(sale.saleDate || sale.createdAt);
         const day = String(saleDate.getDate()).padStart(2, '0');
         const month = String(saleDate.getMonth() + 1).padStart(2, '0');
@@ -75,7 +75,8 @@ class ReceiptGenerator {
         hours = hours % 12;
         hours = hours ? hours : 12; // the hour '0' should be '12'
         const hoursStr = String(hours).padStart(2, '0');
-        const formattedDate = `${day}/${month}/${year}, ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+        // Compact format: DD/MM/YYYY HH:MM:SS AM/PM (no comma, tighter spacing)
+        const formattedDate = `${day}/${month}/${year} ${hoursStr}:${minutes}:${seconds}${ampm}`;
         
         const infoValues = [
           sale.invoiceNumber,
@@ -85,9 +86,14 @@ class ReceiptGenerator {
         ];
 
         infoLabels.forEach((label, i) => {
-          doc.font('Helvetica-Bold').text(label, margin, yPos);
-          doc.font('Helvetica').text(infoValues[i], receiptWidth - margin - 100, yPos, { width: 100, align: 'right' });
-          yPos += 12;
+          doc.font('Helvetica-Bold').fontSize(8);
+          doc.text(label, margin, yPos);
+          // Reduce width and position closer to left column for single line display
+          doc.font('Helvetica').fontSize(8);
+          // Position right column closer - reduce gap significantly
+          const rightColumnX = receiptWidth - margin - 70; // Reduced from 100 to 70
+          doc.text(infoValues[i], rightColumnX, yPos, { width: 70, align: 'right' });
+          yPos += 11; // Slightly reduced spacing
         });
 
         yPos += 5;
