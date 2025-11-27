@@ -59,23 +59,23 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 10;
 
-        // Invoice Info
-        doc.fontSize(8); // Smaller font to fit more on one line
+        // Invoice Info - Aggressive single-line approach
+        doc.fontSize(7); // Very small font
         const infoLabels = ['Invoice #:', 'Date:', 'Customer:', 'Phone:'];
         
-        // Format date to avoid AM/PM overlay - format as compact single line
+        // Format date - ultra compact format
         const saleDate = new Date(sale.saleDate || sale.createdAt);
         const day = String(saleDate.getDate()).padStart(2, '0');
         const month = String(saleDate.getMonth() + 1).padStart(2, '0');
-        const year = saleDate.getFullYear();
+        const year = String(saleDate.getFullYear()).slice(-2); // Use 2-digit year
         let hours = saleDate.getHours();
         const minutes = String(saleDate.getMinutes()).padStart(2, '0');
         const seconds = String(saleDate.getSeconds()).padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        hours = hours ? hours : 12;
         const hoursStr = String(hours).padStart(2, '0');
-        // Compact format: DD/MM/YYYY HH:MM:SS AM/PM (no comma, tighter spacing)
+        // Ultra compact: DD/MM/YY HH:MM:SSAM (no space before AM/PM, 2-digit year)
         const formattedDate = `${day}/${month}/${year} ${hoursStr}:${minutes}:${seconds}${ampm}`;
         
         const infoValues = [
@@ -85,15 +85,18 @@ class ReceiptGenerator {
           customer?.phone || 'N/A'
         ];
 
+        // Aggressive approach: Calculate exact positions to fit on one line
+        const labelWidth = 60; // Fixed width for labels
+        const valueStartX = margin + labelWidth + 5; // Start values right after labels with minimal gap
+        const valueWidth = receiptWidth - valueStartX - margin; // Use remaining space
+
         infoLabels.forEach((label, i) => {
-          doc.font('Helvetica-Bold').fontSize(8);
-          doc.text(label, margin, yPos);
-          // Reduce width and position closer to left column for single line display
-          doc.font('Helvetica').fontSize(8);
-          // Position right column closer - reduce gap significantly
-          const rightColumnX = receiptWidth - margin - 70; // Reduced from 100 to 70
-          doc.text(infoValues[i], rightColumnX, yPos, { width: 70, align: 'right' });
-          yPos += 11; // Slightly reduced spacing
+          doc.font('Helvetica-Bold').fontSize(7);
+          doc.text(label, margin, yPos, { width: labelWidth });
+          doc.font('Helvetica').fontSize(7);
+          // Use left alignment starting right after label to ensure single line
+          doc.text(infoValues[i], valueStartX, yPos, { width: valueWidth });
+          yPos += 10; // Reduced spacing
         });
 
         yPos += 5;
