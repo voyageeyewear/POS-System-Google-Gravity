@@ -52,7 +52,7 @@ module.exports = new EntitySchema({
     },
     paymentMethod: {
       type: 'simple-enum',
-      enum: ['cash', 'upi', 'card', 'other', 'split'],
+      enum: ['cash', 'upi', 'card', 'split'],
       nullable: false,
     },
     paymentMode: {

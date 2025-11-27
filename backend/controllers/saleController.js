@@ -175,8 +175,7 @@ exports.createSale = async (req, res) => {
       const methodMap = {
         'cash': 'Cash',
         'card': 'Card',
-        'upi': 'UPI',
-        'other': 'Other'
+        'upi': 'UPI'
       };
       finalPaymentMode = methodMap[paymentMethod] || 'Cash';
       
