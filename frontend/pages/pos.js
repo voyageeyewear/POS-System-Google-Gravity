@@ -448,17 +448,22 @@ export default function POS() {
         setShowReceipt(true);
         
         // Also show option to download PDF invoice after a short delay
-        setTimeout(() => {
+        setTimeout(async () => {
           const downloadInvoice = window.confirm('Sale completed! Download PDF invoice?');
           if (downloadInvoice) {
-            const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
-            const url = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${sale.invoiceNumber}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            try {
+              const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+              const url = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', `${sale.invoiceNumber}.pdf`);
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+            } catch (error) {
+              console.error('Error downloading invoice:', error);
+              toast.error('Failed to download invoice');
+            }
           }
         }, 500);
       } catch (error) {
