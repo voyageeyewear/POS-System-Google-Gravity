@@ -450,22 +450,17 @@ export default function POS() {
             link.remove();
             
             // Also offer invoice download
-            setTimeout(async () => {
+            setTimeout(() => {
               const downloadInvoice = window.confirm('Download PDF invoice as well?');
               if (downloadInvoice) {
-                try {
-                  const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
-                  const url2 = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
-                  const link2 = document.createElement('a');
-                  link2.href = url2;
-                  link2.setAttribute('download', `${sale.invoiceNumber}.pdf`);
-                  document.body.appendChild(link2);
-                  link2.click();
-                  link2.remove();
-                } catch (error) {
-                  console.error('Error downloading invoice:', error);
-                  toast.error('Failed to download invoice');
-                }
+                const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+                const url2 = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
+                const link2 = document.createElement('a');
+                link2.href = url2;
+                link2.setAttribute('download', `${sale.invoiceNumber}.pdf`);
+                document.body.appendChild(link2);
+                link2.click();
+                link2.remove();
               }
             }, 500);
           } catch (error) {
