@@ -32,25 +32,22 @@ class ReceiptGenerator {
 
         // Voyage Logo (centered at top)
         const logoPath = path.join(__dirname, '../assets/voyage-logo.png');
-        console.log('🔍 Checking logo path:', logoPath);
-        console.log('🔍 Logo exists:', fs.existsSync(logoPath));
         
         if (fs.existsSync(logoPath)) {
           try {
-            const logoWidth = 50; // Slightly larger for visibility
+            const logoWidth = 50; // Size for 90mm receipt
             const logoX = (receiptWidth - logoWidth) / 2; // Center horizontally
-            console.log('🔍 Adding logo at:', logoX, yPos, 'width:', logoWidth);
+            // Use image with explicit dimensions
             doc.image(logoPath, logoX, yPos, { 
-              width: logoWidth,
-              fit: [logoWidth, logoWidth] // Ensure it fits
+              width: logoWidth
+              // Height will be auto-calculated to maintain aspect ratio
             });
+            // Calculate approximate height (assuming square or similar aspect ratio)
             yPos += logoWidth + 10; // Add space after logo
           } catch (error) {
-            console.error('❌ Error adding logo:', error);
+            console.error('❌ Error adding logo to receipt:', error);
             // Continue without logo if there's an error
           }
-        } else {
-          console.warn('⚠️ Logo file not found at:', logoPath);
         }
 
         // Store Header
