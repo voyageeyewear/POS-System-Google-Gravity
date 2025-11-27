@@ -438,18 +438,41 @@ export default function POS() {
       setPaymentMode(null);
       setPaymentDetails(null);
       
-      // Fetch complete sale data with all relations for receipt
-      try {
-        const completeSaleResponse = await saleAPI.getOne(sale.id || sale._id);
-        const completeSale = completeSaleResponse.data.sale;
-        
-        // Store completed sale and show receipt automatically
-        setCompletedSale(completeSale);
-        setShowReceipt(true);
-        
-        // Also show option to download PDF invoice after a short delay
-        setTimeout(async () => {
-          const downloadInvoice = window.confirm('Sale completed! Download PDF invoice?');
+      // Offer download options for invoice and receipt
+      setTimeout(async () => {
+        const downloadReceipt = window.confirm('Sale completed! Download receipt?');
+        if (downloadReceipt) {
+          try {
+            const receiptResponse = await saleAPI.downloadReceipt(sale.id || sale._id);
+            const url = window.URL.createObjectURL(new Blob([receiptResponse.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${sale.invoiceNumber}-receipt.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            // Also offer invoice download
+            setTimeout(() => {
+              const downloadInvoice = window.confirm('Download PDF invoice as well?');
+              if (downloadInvoice) {
+                const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+                const url2 = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
+                const link2 = document.createElement('a');
+                link2.href = url2;
+                link2.setAttribute('download', `${sale.invoiceNumber}.pdf`);
+                document.body.appendChild(link2);
+                link2.click();
+                link2.remove();
+              }
+            }, 500);
+          } catch (error) {
+            console.error('Error downloading receipt:', error);
+            toast.error('Failed to download receipt');
+          }
+        } else {
+          // If receipt not downloaded, still offer invoice
+          const downloadInvoice = window.confirm('Download PDF invoice?');
           if (downloadInvoice) {
             try {
               const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
@@ -465,13 +488,8 @@ export default function POS() {
               toast.error('Failed to download invoice');
             }
           }
-        }, 500);
-      } catch (error) {
-        console.error('Error fetching sale details:', error);
-        // Still show receipt with basic data
-        setCompletedSale(sale);
-        setShowReceipt(true);
-      }
+        }
+      }, 500);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to complete sale');
       console.error(error);

@@ -524,16 +524,22 @@ export default function SalesReports() {
                       <button
                         onClick={async () => {
                           try {
-                            const saleResponse = await saleAPI.getOne(sale.id);
-                            setSelectedSale(saleResponse.data.sale);
-                            setShowReceipt(true);
+                            const receiptResponse = await saleAPI.downloadReceipt(sale.id);
+                            const url = window.URL.createObjectURL(new Blob([receiptResponse.data]));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `${sale.invoiceNumber}-receipt.pdf`);
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            toast.success('Receipt downloaded');
                           } catch (error) {
-                            toast.error('Failed to load receipt');
+                            toast.error('Failed to download receipt');
                             console.error(error);
                           }
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
-                        title="View Receipt"
+                        title="Download Receipt"
                       >
                         <Receipt className="w-4 h-4 text-green-600" />
                       </button>
