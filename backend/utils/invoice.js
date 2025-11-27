@@ -618,8 +618,40 @@ class InvoiceGenerator {
         doc.font('Helvetica');
         doc.text(amountInWords(grandTotalTax), margin, itemY + 12);
 
+        // ===== PAYMENT INFORMATION =====
+        itemY += 40;
+        doc.font('Helvetica-Bold').fontSize(9);
+        doc.text('Payment Details:', margin, itemY);
+        doc.font('Helvetica').fontSize(8);
+        
+        // Check if split payment
+        if (sale.paymentMode === 'Split' && sale.paymentDetails) {
+          let paymentY = itemY + 15;
+          doc.text('Payment Mode: Split Payment', margin, paymentY);
+          paymentY += 12;
+          
+          if (sale.paymentDetails.cash > 0) {
+            doc.text(`- Cash: ₹${parseFloat(sale.paymentDetails.cash).toFixed(2)}`, margin, paymentY);
+            paymentY += 12;
+          }
+          if (sale.paymentDetails.card > 0) {
+            doc.text(`- Card: ₹${parseFloat(sale.paymentDetails.card).toFixed(2)}`, margin, paymentY);
+            paymentY += 12;
+          }
+          if (sale.paymentDetails.upi > 0) {
+            doc.text(`- UPI: ₹${parseFloat(sale.paymentDetails.upi).toFixed(2)}`, margin, paymentY);
+            paymentY += 12;
+          }
+          itemY = paymentY + 10;
+        } else {
+          // Single payment mode
+          const methodLabel = sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash');
+          doc.text(`Payment Mode: ${methodLabel}`, margin, itemY + 15);
+          itemY += 35;
+        }
+
         // ===== FOOTER =====
-        itemY += 100; // Increased margin-top to 100px (50px extra spacing)
+        itemY += 50; // Spacing before footer
         
         // Bank Details (Left)
         doc.fontSize(9).font('Helvetica-Bold');

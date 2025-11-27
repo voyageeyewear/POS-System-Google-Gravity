@@ -52,8 +52,16 @@ module.exports = new EntitySchema({
     },
     paymentMethod: {
       type: 'simple-enum',
-      enum: ['cash', 'upi', 'card', 'other'],
+      enum: ['cash', 'upi', 'card', 'other', 'split'],
       nullable: false,
+    },
+    paymentMode: {
+      type: 'varchar',
+      nullable: true, // 'Cash', 'Card', 'UPI', 'Other', 'Split'
+    },
+    paymentDetails: {
+      type: 'json', // JSON/JSONB for structured data
+      nullable: true, // { cash: 1000, card: 1000, upi: 1000 }
     },
     saleDate: {
       type: 'timestamp',

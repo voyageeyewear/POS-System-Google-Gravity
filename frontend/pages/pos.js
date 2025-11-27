@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import ProductCard from '../components/ProductCard';
 import CartItem from '../components/CartItem';
 import CustomerModal from '../components/CustomerModal';
+import SplitPaymentModal from '../components/SplitPaymentModal';
 import { storeAPI, saleAPI, authAPI, productAPI } from '../utils/api';
 import { Search, ShoppingCart, CreditCard, Receipt, RefreshCw, X, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -21,7 +22,10 @@ export default function POS() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMode, setPaymentMode] = useState(null); // 'Cash', 'Card', 'UPI', 'Other', 'Split'
+  const [paymentDetails, setPaymentDetails] = useState(null); // { cash: 1000, card: 1000, upi: 1000 }
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -355,9 +359,38 @@ export default function POS() {
     setShowCustomerModal(true);
   };
 
+  const handlePaymentMethodChange = (e) => {
+    const method = e.target.value;
+    setPaymentMethod(method);
+    
+    if (method === 'split') {
+      // Open split payment modal
+      setShowSplitPaymentModal(true);
+    } else {
+      // Reset split payment data
+      setPaymentMode(null);
+      setPaymentDetails(null);
+    }
+  };
+
+  const handleSplitPaymentConfirm = (splitData) => {
+    setPaymentMode(splitData.paymentMode);
+    setPaymentDetails(splitData.paymentDetails);
+    setPaymentMethod('split');
+    setShowSplitPaymentModal(false);
+  };
+
   const handleCustomerSubmit = async (customerInfo) => {
+    // Validate payment if split
+    if (paymentMethod === 'split' && (!paymentMode || !paymentDetails)) {
+      toast.error('Please complete split payment details');
+      return;
+    }
+
     setProcessing(true);
     try {
+      const totals = calculateTotals();
+      
       const saleData = {
         storeId: user.assignedStore.id || user.assignedStore._id,
         items: cart.map((item) => {
@@ -379,6 +412,9 @@ export default function POS() {
         }),
         customerInfo,
         paymentMethod,
+        // Add payment mode and details for split payment
+        ...(paymentMode && { paymentMode }),
+        ...(paymentDetails && { paymentDetails }),
       };
 
       console.log('%c🚀 SALE DATA BEING SENT:', 'background: #ff0; color: #000; font-size: 16px; padding: 5px;');
@@ -954,14 +990,40 @@ export default function POS() {
                   </label>
                   <select
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={handlePaymentMethodChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   >
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
                     <option value="card">Card</option>
                     <option value="other">Other</option>
+                    <option value="split">Split Payment</option>
                   </select>
+                  
+                  {/* Show split payment summary if selected */}
+                  {paymentMethod === 'split' && paymentDetails && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded-lg text-sm">
+                      <div className="font-medium text-gray-700 mb-1">Payment Breakdown:</div>
+                      <div className="space-y-1 text-gray-600">
+                        {paymentDetails.cash > 0 && (
+                          <div>Cash: ₹{paymentDetails.cash.toFixed(2)}</div>
+                        )}
+                        {paymentDetails.card > 0 && (
+                          <div>Card: ₹{paymentDetails.card.toFixed(2)}</div>
+                        )}
+                        {paymentDetails.upi > 0 && (
+                          <div>UPI: ₹{paymentDetails.upi.toFixed(2)}</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSplitPaymentModal(true)}
+                        className="mt-2 text-primary-600 hover:text-primary-700 text-xs"
+                      >
+                        Edit Split Payment
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Checkout Button */}
@@ -986,6 +1048,14 @@ export default function POS() {
         isOpen={showCustomerModal}
         onClose={() => setShowCustomerModal(false)}
         onSubmit={handleCustomerSubmit}
+      />
+
+      {/* Split Payment Modal */}
+      <SplitPaymentModal
+        isOpen={showSplitPaymentModal}
+        onClose={() => setShowSplitPaymentModal(false)}
+        totalAmount={totals.total}
+        onConfirm={handleSplitPaymentConfirm}
       />
 
       {/* Floating Dashboard Button - Hide when products are selected */}

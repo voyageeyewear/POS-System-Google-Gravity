@@ -492,9 +492,24 @@ export default function SalesReports() {
                     ₹{parseFloat(sale.totalAmount || 0).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs uppercase">
-                      {sale.paymentMethod}
-                    </span>
+                    {sale.paymentMode === 'Split' && sale.paymentDetails ? (
+                      <div className="space-y-1">
+                        <div className="font-medium text-gray-700">Split Payment:</div>
+                        {sale.paymentDetails.cash > 0 && (
+                          <div className="text-xs text-gray-600">- Cash: ₹{parseFloat(sale.paymentDetails.cash).toFixed(2)}</div>
+                        )}
+                        {sale.paymentDetails.card > 0 && (
+                          <div className="text-xs text-gray-600">- Card: ₹{parseFloat(sale.paymentDetails.card).toFixed(2)}</div>
+                        )}
+                        {sale.paymentDetails.upi > 0 && (
+                          <div className="text-xs text-gray-600">- UPI: ₹{parseFloat(sale.paymentDetails.upi).toFixed(2)}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs uppercase">
+                        {sale.paymentMode || sale.paymentMethod}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {new Date(sale.saleDate).toLocaleDateString()}

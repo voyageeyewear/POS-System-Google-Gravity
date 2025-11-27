@@ -137,3 +137,5 @@ Vercel will give you a URL like:
 
 Once frontend is deployed, your complete POS system will be accessible!
 
+
+

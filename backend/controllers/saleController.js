@@ -51,6 +51,8 @@ exports.createSale = async (req, res) => {
       items,
       customerInfo,
       paymentMethod,
+      paymentMode, // 'Cash', 'Card', 'UPI', 'Other', 'Split'
+      paymentDetails, // { cash: 1000, card: 1000, upi: 1000 }
       notes
     } = req.body;
 
@@ -149,6 +151,40 @@ exports.createSale = async (req, res) => {
     // Total is subtotal - discount (tax already included in prices)
     const totalAmount = subtotal - totalDiscount;
 
+    // Handle payment mode and details
+    let finalPaymentMode = paymentMode;
+    let finalPaymentDetails = paymentDetails;
+
+    // If split payment, validate the details
+    if (paymentMethod === 'split') {
+      if (!paymentDetails || typeof paymentDetails !== 'object') {
+        throw new Error('Payment details are required for split payment');
+      }
+      
+      const splitTotal = (paymentDetails.cash || 0) + 
+                        (paymentDetails.card || 0) + 
+                        (paymentDetails.upi || 0);
+      
+      if (Math.abs(splitTotal - totalAmount) > 0.01) {
+        throw new Error(`Total split amount (₹${splitTotal.toFixed(2)}) must equal bill total (₹${totalAmount.toFixed(2)})`);
+      }
+      
+      finalPaymentMode = 'Split';
+    } else {
+      // For single payment, set payment mode based on payment method
+      const methodMap = {
+        'cash': 'Cash',
+        'card': 'Card',
+        'upi': 'UPI',
+        'other': 'Other'
+      };
+      finalPaymentMode = methodMap[paymentMethod] || 'Cash';
+      
+      // Set payment details for single payment
+      finalPaymentDetails = {};
+      finalPaymentDetails[paymentMethod] = totalAmount;
+    }
+
     // Generate invoice number
     const invoiceNumber = await generateInvoiceNumber(parseInt(storeId));
 
@@ -164,6 +200,8 @@ exports.createSale = async (req, res) => {
       totalTax,
       totalAmount,
       paymentMethod,
+      paymentMode: finalPaymentMode,
+      paymentDetails: JSON.stringify(finalPaymentDetails), // Store as JSON string for TypeORM
       notes: notes || ''
     });
 
@@ -192,6 +230,15 @@ exports.createSale = async (req, res) => {
       where: { id: sale.id },
       relations: ['store', 'cashier', 'customer', 'items']
     });
+    
+    // Parse paymentDetails if it's a string (JSONB from database)
+    if (completeSale.paymentDetails && typeof completeSale.paymentDetails === 'string') {
+      try {
+        completeSale.paymentDetails = JSON.parse(completeSale.paymentDetails);
+      } catch (e) {
+        console.error('Error parsing paymentDetails:', e);
+      }
+    }
 
     res.status(201).json({
       message: 'Sale created successfully',
@@ -217,7 +264,9 @@ exports.getAllSales = async (req, res) => {
       .leftJoinAndSelect('sale.store', 'store')
       .leftJoinAndSelect('sale.cashier', 'cashier')
       .leftJoinAndSelect('sale.customer', 'customer')
-      .leftJoinAndSelect('sale.items', 'items');
+      .leftJoinAndSelect('sale.items', 'items')
+      .addSelect('sale.paymentMode')
+      .addSelect('sale.paymentDetails');
 
     // Role-based filtering
     if (req.user.role === 'cashier' && req.user.assignedStore) {
@@ -243,6 +292,17 @@ exports.getAllSales = async (req, res) => {
       .take(100)
       .getMany();
 
+    // Parse paymentDetails for each sale if it's a string
+    sales.forEach(sale => {
+      if (sale.paymentDetails && typeof sale.paymentDetails === 'string') {
+        try {
+          sale.paymentDetails = JSON.parse(sale.paymentDetails);
+        } catch (e) {
+          console.error('Error parsing paymentDetails:', e);
+        }
+      }
+    });
+
     res.json({ sales });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -262,6 +322,15 @@ exports.getSale = async (req, res) => {
 
     if (!sale) {
       return res.status(404).json({ error: 'Sale not found' });
+    }
+
+    // Parse paymentDetails if it's a string
+    if (sale.paymentDetails && typeof sale.paymentDetails === 'string') {
+      try {
+        sale.paymentDetails = JSON.parse(sale.paymentDetails);
+      } catch (e) {
+        console.error('Error parsing paymentDetails:', e);
+      }
     }
 
     // Check access
@@ -286,8 +355,18 @@ exports.generateInvoice = async (req, res) => {
     
     const sale = await saleRepo.findOne({
       where: { id: parseInt(saleId) },
-      relations: ['store', 'customer', 'items', 'items.product']  // ✅ Load product info
+      relations: ['store', 'customer', 'items', 'items.product'],  // ✅ Load product info
+      select: ['id', 'invoiceNumber', 'storeId', 'cashierId', 'customerId', 'subtotal', 'totalDiscount', 'totalTax', 'totalAmount', 'paymentMethod', 'paymentMode', 'paymentDetails', 'saleDate', 'notes', 'createdAt', 'updatedAt']
     });
+    
+    // Parse paymentDetails if it's a string
+    if (sale && sale.paymentDetails && typeof sale.paymentDetails === 'string') {
+      try {
+        sale.paymentDetails = JSON.parse(sale.paymentDetails);
+      } catch (e) {
+        console.error('Error parsing paymentDetails:', e);
+      }
+    }
 
     if (!sale) {
       console.error(`❌ Sale not found: ${saleId}`);
