@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from '../../components/AdminLayout';
-import { Download, Filter, TrendingUp, DollarSign, Edit, Plus, Trash, X, Search } from 'lucide-react';
+import InvoiceReceipt from '../../components/InvoiceReceipt';
+import { Download, Filter, TrendingUp, DollarSign, Edit, Plus, Trash, X, Search, Receipt } from 'lucide-react';
 import { saleAPI, storeAPI, productAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,10 @@ export default function SalesReports() {
   // Product selection modal
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  
+  // Receipt modal
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   useEffect(() => {
     if (!loading) {
@@ -517,9 +522,25 @@ export default function SalesReports() {
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={async () => {
+                          try {
+                            const saleResponse = await saleAPI.getOne(sale.id);
+                            setSelectedSale(saleResponse.data.sale);
+                            setShowReceipt(true);
+                          } catch (error) {
+                            toast.error('Failed to load receipt');
+                            console.error(error);
+                          }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                        title="View Receipt"
+                      >
+                        <Receipt className="w-4 h-4 text-green-600" />
+                      </button>
+                      <button
                         onClick={() => downloadInvoice(sale.id, sale.invoiceNumber)}
                         className="p-1 hover:bg-gray-100 rounded"
-                        title="Download Invoice"
+                        title="Download Invoice PDF"
                       >
                         <Download className="w-4 h-4 text-primary-600" />
                       </button>
@@ -816,8 +837,22 @@ export default function SalesReports() {
             </div>
           </div>
         </div>
-      )}
-    </AdminLayout>
-  );
-}
+        )}
+
+        {/* Invoice Receipt Modal */}
+        {selectedSale && (
+          <InvoiceReceipt
+            isOpen={showReceipt}
+            onClose={() => {
+              setShowReceipt(false);
+              setSelectedSale(null);
+            }}
+            sale={selectedSale}
+            store={selectedSale.store}
+            customer={selectedSale.customer}
+          />
+        )}
+      </AdminLayout>
+    );
+  }
 

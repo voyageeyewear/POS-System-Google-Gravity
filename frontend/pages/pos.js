@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard';
 import CartItem from '../components/CartItem';
 import CustomerModal from '../components/CustomerModal';
 import SplitPaymentModal from '../components/SplitPaymentModal';
+import InvoiceReceipt from '../components/InvoiceReceipt';
 import { storeAPI, saleAPI, authAPI, productAPI } from '../utils/api';
 import { Search, ShoppingCart, CreditCard, Receipt, RefreshCw, X, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,6 +24,8 @@ export default function POS() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [completedSale, setCompletedSale] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentMode, setPaymentMode] = useState(null); // 'Cash', 'Card', 'UPI', 'Other', 'Split'
   const [paymentDetails, setPaymentDetails] = useState(null); // { cash: 1000, card: 1000, upi: 1000 }
@@ -423,23 +426,46 @@ export default function POS() {
       console.log('%c📏 ProductId Length:', 'background: #f0f; color: #fff; font-size: 16px; padding: 5px;', saleData.items[0]?.productId?.length);
 
       const response = await saleAPI.create(saleData);
+      const sale = response.data.sale;
       
       toast.success('Sale completed successfully!');
       setCart([]);
       setShowCustomerModal(false);
       loadProducts(); // Refresh inventory
       
-      // Show option to download invoice
-      const downloadInvoice = window.confirm('Sale completed! Download invoice?');
-      if (downloadInvoice) {
-        const invoiceResponse = await saleAPI.downloadInvoice(response.data.sale.id || response.data.sale._id);
-        const url = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `${response.data.sale.invoiceNumber}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+      // Reset payment data
+      setPaymentMethod('cash');
+      setPaymentMode(null);
+      setPaymentDetails(null);
+      
+      // Fetch complete sale data with all relations for receipt
+      try {
+        const completeSaleResponse = await saleAPI.getOne(sale.id || sale._id);
+        const completeSale = completeSaleResponse.data.sale;
+        
+        // Store completed sale and show receipt automatically
+        setCompletedSale(completeSale);
+        setShowReceipt(true);
+        
+        // Also show option to download PDF invoice after a short delay
+        setTimeout(() => {
+          const downloadInvoice = window.confirm('Sale completed! Download PDF invoice?');
+          if (downloadInvoice) {
+            const invoiceResponse = await saleAPI.downloadInvoice(sale.id || sale._id);
+            const url = window.URL.createObjectURL(new Blob([invoiceResponse.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${sale.invoiceNumber}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+        }, 500);
+      } catch (error) {
+        console.error('Error fetching sale details:', error);
+        // Still show receipt with basic data
+        setCompletedSale(sale);
+        setShowReceipt(true);
       }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to complete sale');
@@ -1056,6 +1082,20 @@ export default function POS() {
         totalAmount={totals.total}
         onConfirm={handleSplitPaymentConfirm}
       />
+
+      {/* Invoice Receipt Modal */}
+      {completedSale && (
+        <InvoiceReceipt
+          isOpen={showReceipt}
+          onClose={() => {
+            setShowReceipt(false);
+            setCompletedSale(null);
+          }}
+          sale={completedSale}
+          store={user?.assignedStore}
+          customer={completedSale.customer}
+        />
+      )}
 
       {/* Floating Dashboard Button - Hide when products are selected */}
       {selectedProducts.length === 0 && (
