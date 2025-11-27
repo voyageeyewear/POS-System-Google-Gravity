@@ -35,7 +35,7 @@ class ReceiptGenerator {
         
         if (fs.existsSync(logoPath)) {
           try {
-            const logoWidth = 45; // Size for 90mm receipt (slightly smaller to ensure visibility)
+            const logoWidth = 70; // Increased size for better visibility on 90mm receipt
             const logoX = (receiptWidth - logoWidth) / 2; // Center horizontally
             
             // Add logo - PDFKit handles images synchronously
