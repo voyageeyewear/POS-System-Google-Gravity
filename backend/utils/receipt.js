@@ -34,6 +34,10 @@ class ReceiptGenerator {
         // Voyage Logo (centered at top) - Use larger size, maintain aspect ratio
         const logoPath = path.resolve(__dirname, '../assets/voyage-logo.png');
         
+        // Add 10px (10 points) margin-top for logo
+        const logoTopMargin = 10;
+        yPos += logoTopMargin;
+        
         if (fs.existsSync(logoPath)) {
           try {
             // Use smaller width for better proportion (90mm = ~255 points)
