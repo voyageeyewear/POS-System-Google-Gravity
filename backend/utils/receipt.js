@@ -96,9 +96,9 @@ class ReceiptGenerator {
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
         yPos += 8; // Reduced from 10
 
-        yPos += 5;
+        yPos += 3; // Reduced from 5
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 10;
+        yPos += 5; // Reduced from 10
 
         // Invoice Info - Aggressive single-line approach
         doc.fontSize(7); // Very small font
@@ -161,28 +161,28 @@ class ReceiptGenerator {
           const lines = doc.heightOfString(itemName, { width: contentWidth - 70 });
           doc.text(itemName, margin, yPos, { width: contentWidth - 70 });
           doc.text(`Rs.${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-          yPos += Math.max(lines, 8); // Reduced from 12
+          yPos += Math.max(lines, 6); // Further reduced from 8
         });
 
-        yPos += 5;
+        yPos += 3; // Reduced from 5
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 10;
+        yPos += 5; // Reduced from 10
 
         // Totals - use same aggressive single-line approach
-        doc.fontSize(8);
+        doc.fontSize(7); // Reduced from 8
         const totalsLabelWidth = 50;
         const totalsValueX = margin + totalsLabelWidth + 3;
         const totalsValueWidth = receiptWidth - totalsValueX - margin;
         
         doc.font('Helvetica-Bold').text('Subtotal:', margin, yPos, { width: totalsLabelWidth });
         doc.font('Helvetica').text(`Rs.${parseFloat(sale.subtotal || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-        yPos += 11;
+        yPos += 6; // Reduced from 11
 
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.font('Helvetica-Bold').text('Discount:', margin, yPos, { width: totalsLabelWidth });
           doc.font('Helvetica').fillColor('green').text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
           doc.fillColor('black');
-          yPos += 11;
+          yPos += 6; // Reduced from 11
         }
 
         doc.font('Helvetica-Bold').text('Tax:', margin, yPos, { width: totalsLabelWidth });
@@ -192,7 +192,7 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 3; // Reduced from 5
 
-        doc.fontSize(10).font('Helvetica-Bold'); // Reduced from 12
+        doc.fontSize(9).font('Helvetica-Bold'); // Further reduced from 10
         const totalLabel = 'Total:';
         const totalAmount = `Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`;
         // Calculate positions to ensure single line - use more aggressive spacing
@@ -200,8 +200,8 @@ class ReceiptGenerator {
         const totalValueX = margin + totalLabelWidth + 3; // Very close to label
         const totalValueWidth = receiptWidth - totalValueX - margin;
         doc.text(totalLabel, margin, yPos, { width: totalLabelWidth });
-        doc.fontSize(9).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Reduced from 11
-        yPos += 10; // Reduced from 15
+        doc.fontSize(8).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Further reduced from 9
+        yPos += 7; // Reduced from 10
 
         // Payment Mode
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
