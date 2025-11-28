@@ -140,15 +140,15 @@ class ReceiptGenerator {
           yPos += 8; // Reduced from 10
         });
 
-        yPos += 3; // Reduced from 5
+        yPos += 2; // Further reduced
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 6; // Reduced from 10
+        yPos += 5; // Further reduced
 
         // Items
-        doc.fontSize(8).font('Helvetica-Bold'); // Reduced from 9
+        doc.fontSize(7).font('Helvetica-Bold'); // Further reduced from 8
         doc.text('Item', margin, yPos);
         doc.text('Amount', receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-        yPos += 9; // Reduced from 12
+        yPos += 7; // Further reduced from 9
 
         doc.font('Helvetica').fontSize(7); // Reduced from 8
         sale.items?.forEach((item) => {
