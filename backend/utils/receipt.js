@@ -3,6 +3,32 @@ const fs = require('fs');
 const path = require('path');
 
 class ReceiptGenerator {
+  // Helper function to draw a table row with borders
+  drawTableRow(doc, x, y, width, height, label, value, isHeader = false, isBold = false) {
+    const cellPadding = 3;
+    const labelWidth = width * 0.5;
+    const valueWidth = width * 0.5;
+    
+    // Draw borders
+    doc.moveTo(x, y).lineTo(x + width, y).stroke(); // Top border
+    doc.moveTo(x, y + height).lineTo(x + width, y + height).stroke(); // Bottom border
+    doc.moveTo(x, y).lineTo(x, y + height).stroke(); // Left border
+    doc.moveTo(x + labelWidth, y).lineTo(x + labelWidth, y + height).stroke(); // Middle border
+    doc.moveTo(x + width, y).lineTo(x + width, y + height).stroke(); // Right border
+    
+    // Draw text
+    if (isHeader) {
+      doc.font('Helvetica-Bold').fontSize(7);
+    } else {
+      doc.font(isBold ? 'Helvetica-Bold' : 'Helvetica').fontSize(7);
+    }
+    
+    doc.text(label || '', x + cellPadding, y + (height - 7) / 2, { width: labelWidth - cellPadding * 2 });
+    doc.text(value || '', x + labelWidth + cellPadding, y + (height - 7) / 2, { 
+      width: valueWidth - cellPadding * 2,
+      align: 'right'
+    });
+  }
   async generateReceipt(sale, store, customer) {
     return new Promise((resolve, reject) => {
       try {
@@ -130,30 +156,26 @@ class ReceiptGenerator {
           customer?.phone || 'N/A'
         ];
 
-        // Aggressive approach: Calculate exact positions to fit on one line
-        const labelWidth = 60; // Fixed width for labels
-        const valueStartX = margin + labelWidth + 5; // Start values right after labels with minimal gap
-        const valueWidth = receiptWidth - valueStartX - margin; // Use remaining space
-
+        // Invoice Info - Table format with borders
+        const infoRowHeight = 7;
+        const infoTableWidth = contentWidth;
+        
         infoLabels.forEach((label, i) => {
-          doc.font('Helvetica-Bold').fontSize(7);
-          doc.text(label, margin, yPos, { width: labelWidth });
-          doc.font('Helvetica').fontSize(7);
-          // Use left alignment starting right after label to ensure single line
-          doc.text(infoValues[i], valueStartX, yPos, { width: valueWidth });
-          yPos += 8; // Reduced from 10
+          this.drawTableRow(doc, margin, yPos, infoTableWidth, infoRowHeight, label, infoValues[i], false, false);
+          yPos += infoRowHeight;
         });
 
-        yPos += 2; // Further reduced
-        doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 5; // Further reduced
+        yPos += 3;
 
-        // Items - Clean table format
-        doc.fontSize(7).font('Helvetica-Bold');
-        doc.text('Item', margin, yPos);
-        doc.text('Amount', receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-        yPos += 6;
+        // Items - Table format with borders
+        const rowHeight = 8;
+        const tableWidth = contentWidth;
+        
+        // Header row
+        this.drawTableRow(doc, margin, yPos, tableWidth, rowHeight, 'Item', 'Amount', true);
+        yPos += rowHeight;
 
+        // Item rows
         doc.font('Helvetica').fontSize(7);
         sale.items?.forEach((item) => {
           const unitPrice = parseFloat(item.discountedPrice || item.unitPrice || 0);
@@ -161,60 +183,52 @@ class ReceiptGenerator {
           const itemTotal = (unitPrice * quantity).toFixed(2);
           const itemName = item.name || item.productName || 'Item';
           
-          // Handle long item names - clean wrapping
-          const lines = doc.heightOfString(itemName, { width: contentWidth - 70 });
-          doc.text(itemName, margin, yPos, { width: contentWidth - 70 });
-          doc.text(`Rs.${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-          yPos += Math.max(lines, 6);
+          // Calculate if item name needs multiple lines
+          const itemNameWidth = tableWidth * 0.5 - 6;
+          const lines = doc.heightOfString(itemName, { width: itemNameWidth });
+          const actualRowHeight = Math.max(rowHeight, lines * 6 + 4);
+          
+          // Draw row with borders
+          this.drawTableRow(doc, margin, yPos, tableWidth, actualRowHeight, itemName, `Rs.${itemTotal}`, false, false);
+          yPos += actualRowHeight;
         });
 
-        yPos += 3; // Reduced from 5
-        doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 5; // Reduced from 10
-
-        // Totals - Clean aligned formatting
-        doc.fontSize(7);
-        const totalsLabelWidth = 55;
-        const totalsValueX = margin + totalsLabelWidth + 3;
-        const totalsValueWidth = receiptWidth - totalsValueX - margin;
-        
-        doc.font('Helvetica-Bold').text('Subtotal:', margin, yPos, { width: totalsLabelWidth });
-        doc.font('Helvetica').text(`Rs.${parseFloat(sale.subtotal || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-        yPos += 6;
-
-        if (parseFloat(sale.totalDiscount || 0) > 0) {
-          doc.font('Helvetica-Bold').text('Discount:', margin, yPos, { width: totalsLabelWidth });
-          doc.font('Helvetica').fillColor('green').text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-          doc.fillColor('black');
-          yPos += 6;
-        }
-
-        doc.font('Helvetica-Bold').text('Tax:', margin, yPos, { width: totalsLabelWidth });
-        doc.font('Helvetica').text(`Rs.${parseFloat(sale.totalTax || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-        yPos += 6;
-
-        doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 3;
 
-        doc.fontSize(9).font('Helvetica-Bold');
-        const totalLabel = 'Total:';
-        const totalAmount = `Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`;
-        // Clean alignment for total
-        const totalLabelWidth = 45;
-        const totalValueX = margin + totalLabelWidth + 3;
-        const totalValueWidth = receiptWidth - totalValueX - margin;
-        doc.text(totalLabel, margin, yPos, { width: totalLabelWidth });
-        doc.fontSize(9).text(totalAmount, totalValueX, yPos, { width: totalValueWidth });
-        yPos += 8;
+        // Totals - Table format with borders
+        const totalsRowHeight = 7;
+        
+        // Subtotal row
+        this.drawTableRow(doc, margin, yPos, tableWidth, totalsRowHeight, 'Subtotal:', `Rs.${parseFloat(sale.subtotal || 0).toFixed(2)}`, false, true);
+        yPos += totalsRowHeight;
 
-        // Payment Mode - Clean formatting
-        doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
-        yPos += 5;
+        // Discount row (if applicable)
+        if (parseFloat(sale.totalDiscount || 0) > 0) {
+          doc.fillColor('green');
+          this.drawTableRow(doc, margin, yPos, tableWidth, totalsRowHeight, 'Discount:', `-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, false, true);
+          doc.fillColor('black');
+          yPos += totalsRowHeight;
+        }
 
-        doc.fontSize(7).font('Helvetica-Bold');
-        let paymentText = `Payment Mode: ${sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash')}`;
-        doc.text(paymentText, margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 6;
+        // Tax row
+        this.drawTableRow(doc, margin, yPos, tableWidth, totalsRowHeight, 'Tax:', `Rs.${parseFloat(sale.totalTax || 0).toFixed(2)}`, false, true);
+        yPos += totalsRowHeight;
+
+        // Total row (bold and slightly taller)
+        const totalRowHeight = 9;
+        doc.fontSize(8);
+        this.drawTableRow(doc, margin, yPos, tableWidth, totalRowHeight, 'Total:', `Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, false, true);
+        doc.fontSize(7);
+        yPos += totalRowHeight;
+
+        // Payment Mode - Table format with borders
+        yPos += 3;
+        const paymentRowHeight = 7;
+        
+        // Payment Mode header row
+        const paymentMode = sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash');
+        this.drawTableRow(doc, margin, yPos, tableWidth, paymentRowHeight, 'Payment Mode:', paymentMode, false, true);
+        yPos += paymentRowHeight;
 
         // Parse paymentDetails if it's a string
         let paymentDetails = sale.paymentDetails;
@@ -226,27 +240,19 @@ class ReceiptGenerator {
           }
         }
 
+        // Payment breakdown rows (if split payment)
         if (sale.paymentMode === 'Split' && paymentDetails) {
-          doc.font('Helvetica').fontSize(7);
-          // Clean aligned payment breakdown - match totals alignment
-          const paymentLabelWidth = 55;
-          const paymentValueX = margin + paymentLabelWidth + 3;
-          const paymentValueWidth = receiptWidth - paymentValueX - margin;
-          
           if (paymentDetails.cash > 0) {
-            doc.font('Helvetica-Bold').text('Cash:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
-            yPos += 6;
+            this.drawTableRow(doc, margin, yPos, tableWidth, paymentRowHeight, 'Cash:', `Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, false, false);
+            yPos += paymentRowHeight;
           }
           if (paymentDetails.card > 0) {
-            doc.font('Helvetica-Bold').text('Card:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
-            yPos += 6;
+            this.drawTableRow(doc, margin, yPos, tableWidth, paymentRowHeight, 'Card:', `Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, false, false);
+            yPos += paymentRowHeight;
           }
           if (paymentDetails.upi > 0) {
-            doc.font('Helvetica-Bold').text('UPI:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
-            yPos += 6;
+            this.drawTableRow(doc, margin, yPos, tableWidth, paymentRowHeight, 'UPI:', `Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, false, false);
+            yPos += paymentRowHeight;
           }
         }
 
