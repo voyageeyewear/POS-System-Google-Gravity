@@ -51,7 +51,7 @@ class ReceiptGenerator {
             });
             
             // Move yPos down by logo height plus minimal spacing
-            yPos += logoHeight + 5; // Reduced from 12 to 5
+            yPos += logoHeight + 2; // Very close spacing
           } catch (error) {
             console.error('❌ Error adding logo to receipt:', error.message);
             console.error('Logo path attempted:', logoPath);
