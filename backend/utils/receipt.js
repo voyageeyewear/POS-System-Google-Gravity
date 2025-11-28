@@ -50,8 +50,8 @@ class ReceiptGenerator {
               height: logoHeight // Maintain actual aspect ratio
             });
             
-            // Move yPos down by logo height plus minimal spacing
-            yPos += logoHeight + 2; // Very close spacing
+            // Move yPos down by logo height with minimal spacing
+            yPos += logoHeight - 5; // Overlap slightly or very tight spacing
           } catch (error) {
             console.error('❌ Error adding logo to receipt:', error.message);
             console.error('Logo path attempted:', logoPath);
