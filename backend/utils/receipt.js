@@ -224,23 +224,24 @@ class ReceiptGenerator {
 
         if (sale.paymentMode === 'Split' && paymentDetails) {
           doc.font('Helvetica').fontSize(7);
-          // Align payment breakdown nicely
-          const paymentLabelWidth = 50;
-          const paymentValueX = margin + paymentLabelWidth + 5;
+          // Clean aligned payment breakdown - match totals alignment
+          const paymentLabelWidth = 55;
+          const paymentValueX = margin + paymentLabelWidth + 3;
+          const paymentValueWidth = receiptWidth - paymentValueX - margin;
           
           if (paymentDetails.cash > 0) {
             doc.font('Helvetica-Bold').text('Cash:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, paymentValueX, yPos);
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
             yPos += 6;
           }
           if (paymentDetails.card > 0) {
             doc.font('Helvetica-Bold').text('Card:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, paymentValueX, yPos);
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
             yPos += 6;
           }
           if (paymentDetails.upi > 0) {
             doc.font('Helvetica-Bold').text('UPI:', margin, yPos, { width: paymentLabelWidth });
-            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, paymentValueX, yPos);
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, paymentValueX, yPos, { width: paymentValueWidth });
             yPos += 6;
           }
         }
