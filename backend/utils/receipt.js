@@ -56,32 +56,32 @@ class ReceiptGenerator {
         
         yPos += Math.max(logoHeight, 30) + 8;
 
-        // Store Name - Add top padding
-        yPos += 8;
+        // Store Name - Add more top padding for neat spacing
+        yPos += 12;
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 8;
+        yPos += 10;
 
-        // Store Details
+        // Store Details - Better spacing between lines
         doc.fontSize(6).font('Helvetica');
         if (store?.address) {
           if (store.address.street) {
             doc.text(store.address.street, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 6;
+            yPos += 7;
           }
           if (store.address.city && store.address.state) {
             doc.text(`${store.address.city}, ${store.address.state} ${store.address.zipCode || ''}`, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 6;
+            yPos += 7;
           }
         }
         doc.text('voyagekiosk@voyageeyewear.in', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 6;
+        yPos += 7;
         doc.text('+91 97167 85038', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 6;
+        yPos += 7;
         const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ';
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
-        // Add bottom padding
-        yPos += 8;
+        // Add more bottom padding for neat spacing
+        yPos += 12;
 
         // Divider
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
