@@ -56,7 +56,8 @@ class ReceiptGenerator {
         
         yPos += Math.max(logoHeight, 30) + 8;
 
-        // Store Name
+        // Store Name - Add top padding
+        yPos += 8;
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
         yPos += 8;
@@ -79,7 +80,8 @@ class ReceiptGenerator {
         yPos += 6;
         const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ';
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        // Add bottom padding
+        yPos += 8;
 
         // Divider
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
@@ -201,11 +203,11 @@ class ReceiptGenerator {
           colX += colWidths.qty + 2;
           
           // Price
-          doc.text(`Rs.${unitPrice.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right' });
+          doc.text(`₹${unitPrice.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right' });
           colX += colWidths.price + 2;
           
           // Total
-          doc.text(`Rs.${itemTotal.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right' });
+          doc.text(`₹${itemTotal.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right' });
           
           yPos += rowHeight + 2; // Add spacing between rows
         });
@@ -222,19 +224,19 @@ class ReceiptGenerator {
         
         // Subtotal before Tax
         doc.text('Subtotal before Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`₹${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         yPos += 7;
 
         // Discount (if applicable)
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.text('Discount', margin, yPos, { width: labelWidth });
-          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+          doc.text(`-₹${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
           yPos += 7;
         }
 
         // Total Tax
         doc.text('Total Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`₹${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         yPos += 8;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
@@ -243,7 +245,7 @@ class ReceiptGenerator {
         // Total Invoice Amount
         doc.fontSize(8).font('Helvetica-Bold');
         doc.text('Total Invoice Amount', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`₹${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         doc.fontSize(6);
         yPos += 12;
 
@@ -268,15 +270,15 @@ class ReceiptGenerator {
 
         if (sale.paymentMode === 'Split' && paymentDetails) {
           if (paymentDetails.cash > 0) {
-            doc.text(`  Cash: Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, margin, yPos);
+            doc.text(`  Cash: ₹${parseFloat(paymentDetails.cash).toFixed(2)}`, margin, yPos);
             yPos += 6;
           }
           if (paymentDetails.card > 0) {
-            doc.text(`  Card: Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, margin, yPos);
+            doc.text(`  Card: ₹${parseFloat(paymentDetails.card).toFixed(2)}`, margin, yPos);
             yPos += 6;
           }
           if (paymentDetails.upi > 0) {
-            doc.text(`  UPI: Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, margin, yPos);
+            doc.text(`  UPI: ₹${parseFloat(paymentDetails.upi).toFixed(2)}`, margin, yPos);
             yPos += 6;
           }
         }
@@ -284,13 +286,6 @@ class ReceiptGenerator {
         yPos += 8;
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 8;
-
-        // Authorization
-        doc.fontSize(6).font('Helvetica');
-        doc.text('For Voyage Eyewear:', margin, yPos);
-        yPos += 12;
-        doc.text('Authorized Signatory', margin, yPos);
-        yPos += 10;
 
         // Footer
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
