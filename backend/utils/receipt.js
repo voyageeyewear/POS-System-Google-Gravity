@@ -187,7 +187,7 @@ class ReceiptGenerator {
 
         doc.font('Helvetica-Bold').text('Tax:', margin, yPos, { width: totalsLabelWidth });
         doc.font('Helvetica').text(`Rs.${parseFloat(sale.totalTax || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-        yPos += 8; // Reduced from 12
+        yPos += 6;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 3; // Reduced from 5
