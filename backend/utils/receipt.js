@@ -144,24 +144,24 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 5; // Further reduced
 
-        // Items
-        doc.fontSize(7).font('Helvetica-Bold'); // Further reduced from 8
+        // Items - Clean table format
+        doc.fontSize(7).font('Helvetica-Bold');
         doc.text('Item', margin, yPos);
         doc.text('Amount', receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-        yPos += 7; // Further reduced from 9
+        yPos += 6;
 
-        doc.font('Helvetica').fontSize(7); // Reduced from 8
+        doc.font('Helvetica').fontSize(7);
         sale.items?.forEach((item) => {
           const unitPrice = parseFloat(item.discountedPrice || item.unitPrice || 0);
           const quantity = parseInt(item.quantity || 1);
           const itemTotal = (unitPrice * quantity).toFixed(2);
           const itemName = item.name || item.productName || 'Item';
           
-          // Handle long item names - reduce spacing
+          // Handle long item names - clean wrapping
           const lines = doc.heightOfString(itemName, { width: contentWidth - 70 });
           doc.text(itemName, margin, yPos, { width: contentWidth - 70 });
           doc.text(`Rs.${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-          yPos += Math.max(lines, 6); // Further reduced from 8
+          yPos += Math.max(lines, 6);
         });
 
         yPos += 3; // Reduced from 5
@@ -203,13 +203,14 @@ class ReceiptGenerator {
         doc.fontSize(8).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Further reduced from 9
         yPos += 7; // Reduced from 10
 
-        // Payment Mode
+        // Payment Mode - Clean formatting
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
-        yPos += 6; // Reduced from 10
+        yPos += 5;
 
-        doc.fontSize(8).font('Helvetica-Bold'); // Reduced from 9
+        doc.fontSize(7).font('Helvetica-Bold');
         let paymentText = `Payment Mode: ${sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash')}`;
-        doc.text(paymentText, margin, yPos);
+        doc.text(paymentText, margin, yPos, { width: contentWidth, align: 'center' });
+        yPos += 6;
 
         // Parse paymentDetails if it's a string
         let paymentDetails = sale.paymentDetails;
@@ -222,19 +223,25 @@ class ReceiptGenerator {
         }
 
         if (sale.paymentMode === 'Split' && paymentDetails) {
-          yPos += 8; // Reduced from 12
-          doc.font('Helvetica').fontSize(7); // Reduced from 8
+          doc.font('Helvetica').fontSize(7);
+          // Align payment breakdown nicely
+          const paymentLabelWidth = 50;
+          const paymentValueX = margin + paymentLabelWidth + 5;
+          
           if (paymentDetails.cash > 0) {
-            doc.text(`Cash: Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, margin + 10, yPos);
-            yPos += 7; // Reduced from 10
+            doc.font('Helvetica-Bold').text('Cash:', margin, yPos, { width: paymentLabelWidth });
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, paymentValueX, yPos);
+            yPos += 6;
           }
           if (paymentDetails.card > 0) {
-            doc.text(`Card: Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, margin + 10, yPos);
-            yPos += 7; // Reduced from 10
+            doc.font('Helvetica-Bold').text('Card:', margin, yPos, { width: paymentLabelWidth });
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, paymentValueX, yPos);
+            yPos += 6;
           }
           if (paymentDetails.upi > 0) {
-            doc.text(`UPI: Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, margin + 10, yPos);
-            yPos += 7; // Reduced from 10
+            doc.font('Helvetica-Bold').text('UPI:', margin, yPos, { width: paymentLabelWidth });
+            doc.font('Helvetica').text(`Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, paymentValueX, yPos);
+            yPos += 6;
           }
         }
 
