@@ -168,21 +168,21 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 5; // Reduced from 10
 
-        // Totals - use same aggressive single-line approach
-        doc.fontSize(7); // Reduced from 8
-        const totalsLabelWidth = 50;
+        // Totals - Clean aligned formatting
+        doc.fontSize(7);
+        const totalsLabelWidth = 55;
         const totalsValueX = margin + totalsLabelWidth + 3;
         const totalsValueWidth = receiptWidth - totalsValueX - margin;
         
         doc.font('Helvetica-Bold').text('Subtotal:', margin, yPos, { width: totalsLabelWidth });
         doc.font('Helvetica').text(`Rs.${parseFloat(sale.subtotal || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
-        yPos += 6; // Reduced from 11
+        yPos += 6;
 
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.font('Helvetica-Bold').text('Discount:', margin, yPos, { width: totalsLabelWidth });
           doc.font('Helvetica').fillColor('green').text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, totalsValueX, yPos, { width: totalsValueWidth });
           doc.fillColor('black');
-          yPos += 6; // Reduced from 11
+          yPos += 6;
         }
 
         doc.font('Helvetica-Bold').text('Tax:', margin, yPos, { width: totalsLabelWidth });
@@ -190,18 +190,18 @@ class ReceiptGenerator {
         yPos += 6;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 3; // Reduced from 5
+        yPos += 3;
 
-        doc.fontSize(9).font('Helvetica-Bold'); // Further reduced from 10
+        doc.fontSize(9).font('Helvetica-Bold');
         const totalLabel = 'Total:';
         const totalAmount = `Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`;
-        // Calculate positions to ensure single line - use more aggressive spacing
-        const totalLabelWidth = 40;
-        const totalValueX = margin + totalLabelWidth + 3; // Very close to label
+        // Clean alignment for total
+        const totalLabelWidth = 45;
+        const totalValueX = margin + totalLabelWidth + 3;
         const totalValueWidth = receiptWidth - totalValueX - margin;
         doc.text(totalLabel, margin, yPos, { width: totalLabelWidth });
-        doc.fontSize(8).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Further reduced from 9
-        yPos += 7; // Reduced from 10
+        doc.fontSize(9).text(totalAmount, totalValueX, yPos, { width: totalValueWidth });
+        yPos += 8;
 
         // Payment Mode - Clean formatting
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
