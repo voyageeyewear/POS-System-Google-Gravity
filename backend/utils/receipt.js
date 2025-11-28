@@ -81,10 +81,15 @@ class ReceiptGenerator {
           doc.text(`Phone: ${store.phone}`, margin, yPos, { width: contentWidth, align: 'center' });
           yPos += 10;
         }
-        if (store?.email) {
-          doc.text(`Email: ${store.email}`, margin, yPos, { width: contentWidth, align: 'center' });
-          yPos += 10;
-        }
+        // Email - use default if not set or replace subhash email
+        const storeEmail = store?.email && !store.email.includes('subhash-nagar') 
+          ? store.email 
+          : 'voyagekiosk@voyageeyewear.in';
+        doc.text(`Email: ${storeEmail}`, margin, yPos, { width: contentWidth, align: 'center' });
+        yPos += 10;
+        // Contact number
+        doc.text(`Contact: +91 97167 85038`, margin, yPos, { width: contentWidth, align: 'center' });
+        yPos += 10;
         // GST Number (use store GST or default)
         const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ'; // Default GST from invoice
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
