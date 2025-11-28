@@ -115,35 +115,42 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 8;
 
-        // Items Table Header
+        // Items Table Header - Adjusted column widths to prevent overlap
         doc.fontSize(6).font('Helvetica-Bold');
         const colWidths = {
-          sl: 15,
-          product: 100,
-          hsn: 35,
-          qty: 20,
-          price: 30,
+          sl: 18,
+          product: 90,
+          hsn: 32,
+          qty: 18,
+          price: 32,
           total: 35
         };
         
+        // Ensure total width fits within contentWidth
+        const totalColWidth = colWidths.sl + colWidths.product + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total;
+        if (totalColWidth > contentWidth) {
+          // Adjust product column to fit
+          colWidths.product = contentWidth - (colWidths.sl + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total);
+        }
+        
         let colX = margin;
         doc.text('Sl.', colX, yPos, { width: colWidths.sl, align: 'center' });
-        colX += colWidths.sl;
+        colX += colWidths.sl + 2; // Add small gap
         doc.text('Product Name', colX, yPos, { width: colWidths.product });
-        colX += colWidths.product;
+        colX += colWidths.product + 2;
         doc.text('HSN', colX, yPos, { width: colWidths.hsn, align: 'center' });
-        colX += colWidths.hsn;
+        colX += colWidths.hsn + 2;
         doc.text('Qty', colX, yPos, { width: colWidths.qty, align: 'center' });
-        colX += colWidths.qty;
+        colX += colWidths.qty + 2;
         doc.text('Price', colX, yPos, { width: colWidths.price, align: 'right' });
-        colX += colWidths.price;
+        colX += colWidths.price + 2;
         doc.text('Total', colX, yPos, { width: colWidths.total, align: 'right' });
         
         yPos += 8;
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 5;
 
-        // Items
+        // Items - Handle text wrapping properly
         doc.fontSize(6).font('Helvetica');
         let subtotalBeforeTax = 0;
         let totalTax = 0;
@@ -172,51 +179,71 @@ class ReceiptGenerator {
           
           const productName = (item.name || item.productName || 'Product');
           
-          colX = margin;
-          doc.text((index + 1).toString(), colX, yPos, { width: colWidths.sl, align: 'center' });
-          colX += colWidths.sl;
-          doc.text(productName, colX, yPos, { width: colWidths.product });
-          colX += colWidths.product;
-          doc.text(hsnCode, colX, yPos, { width: colWidths.hsn, align: 'center' });
-          colX += colWidths.hsn;
-          doc.text(quantity.toString(), colX, yPos, { width: colWidths.qty, align: 'center' });
-          colX += colWidths.qty;
-          doc.text(`Rs.${unitPrice.toFixed(2)}`, colX, yPos, { width: colWidths.price, align: 'right' });
-          colX += colWidths.price;
-          doc.text(`Rs.${itemTotal.toFixed(2)}`, colX, yPos, { width: colWidths.total, align: 'right' });
+          // Calculate how many lines the product name will take
+          const productNameHeight = doc.heightOfString(productName, { width: colWidths.product });
+          const rowHeight = Math.max(productNameHeight, 8);
           
-          yPos += 8;
+          // Sl. No.
+          colX = margin;
+          doc.text((index + 1).toString(), colX, yPos + (rowHeight - 6) / 2, { width: colWidths.sl, align: 'center' });
+          colX += colWidths.sl + 2;
+          
+          // Product Name (with wrapping)
+          doc.text(productName, colX, yPos, { width: colWidths.product });
+          colX += colWidths.product + 2;
+          
+          // HSN
+          doc.text(hsnCode, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.hsn, align: 'center' });
+          colX += colWidths.hsn + 2;
+          
+          // Qty
+          doc.text(quantity.toString(), colX, yPos + (rowHeight - 6) / 2, { width: colWidths.qty, align: 'center' });
+          colX += colWidths.qty + 2;
+          
+          // Price
+          doc.text(`Rs.${unitPrice.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right' });
+          colX += colWidths.price + 2;
+          
+          // Total
+          doc.text(`Rs.${itemTotal.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right' });
+          
+          yPos += rowHeight + 2; // Add spacing between rows
         });
 
         yPos += 5;
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 8;
 
-        // Summary Section
+        // Summary Section - Fixed alignment to prevent overlap
         doc.fontSize(6).font('Helvetica');
-        const labelWidth = 140;
-        const valueX = receiptWidth - margin - 50;
+        const labelWidth = 130;
+        const valueX = receiptWidth - margin - 55;
+        const valueWidth = 55;
         
-        doc.text('Subtotal before Tax', margin, yPos);
-        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: 50, align: 'right' });
+        // Subtotal before Tax
+        doc.text('Subtotal before Tax', margin, yPos, { width: labelWidth });
+        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         yPos += 7;
 
+        // Discount (if applicable)
         if (parseFloat(sale.totalDiscount || 0) > 0) {
-          doc.text('Discount', margin, yPos);
-          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: 50, align: 'right' });
+          doc.text('Discount', margin, yPos, { width: labelWidth });
+          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
           yPos += 7;
         }
 
-        doc.text('Total Tax', margin, yPos);
-        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: 50, align: 'right' });
+        // Total Tax
+        doc.text('Total Tax', margin, yPos, { width: labelWidth });
+        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         yPos += 8;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 6;
 
+        // Total Invoice Amount
         doc.fontSize(8).font('Helvetica-Bold');
-        doc.text('Total Invoice Amount', margin, yPos);
-        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: 50, align: 'right' });
+        doc.text('Total Invoice Amount', margin, yPos, { width: labelWidth });
+        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
         doc.fontSize(6);
         yPos += 12;
 
