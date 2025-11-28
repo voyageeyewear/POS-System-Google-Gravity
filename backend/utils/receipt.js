@@ -21,8 +21,9 @@ class ReceiptGenerator {
         const contentWidth = receiptWidth - (margin * 2);
         
         const doc = new PDFDocument({ 
-          size: [receiptWidth, 842], // 90mm width, auto height
-          margin: margin
+          size: [receiptWidth, 842], // 90mm width, fixed height
+          margin: margin,
+          autoFirstPage: true
         });
         const stream = fs.createWriteStream(filePath);
         
@@ -62,38 +63,38 @@ class ReceiptGenerator {
         }
 
         // Store Header
-        doc.fontSize(18).font('Helvetica-Bold');
+        doc.fontSize(14).font('Helvetica-Bold'); // Reduced from 18
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 25;
+        yPos += 18; // Reduced from 25
 
-        doc.fontSize(8).font('Helvetica');
+        doc.fontSize(7).font('Helvetica'); // Reduced from 8
         if (store?.address) {
           if (store.address.street) {
             doc.text(store.address.street, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 10;
+            yPos += 8; // Reduced from 10
           }
           if (store.address.city && store.address.state) {
             doc.text(`${store.address.city}, ${store.address.state} ${store.address.zipCode || ''}`, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 10;
+            yPos += 8; // Reduced from 10
           }
         }
         if (store?.phone) {
           doc.text(`Phone: ${store.phone}`, margin, yPos, { width: contentWidth, align: 'center' });
-          yPos += 10;
+          yPos += 8; // Reduced from 10
         }
         // Email - use default if not set or replace subhash email
         const storeEmail = store?.email && !store.email.includes('subhash-nagar') 
           ? store.email 
           : 'voyagekiosk@voyageeyewear.in';
         doc.text(`Email: ${storeEmail}`, margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        yPos += 8; // Reduced from 10
         // Contact number
         doc.text(`Contact: +91 97167 85038`, margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        yPos += 8; // Reduced from 10
         // GST Number (use store GST or default)
         const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ'; // Default GST from invoice
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        yPos += 8; // Reduced from 10
 
         yPos += 5;
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
@@ -136,31 +137,31 @@ class ReceiptGenerator {
           doc.font('Helvetica').fontSize(7);
           // Use left alignment starting right after label to ensure single line
           doc.text(infoValues[i], valueStartX, yPos, { width: valueWidth });
-          yPos += 10; // Reduced spacing
+          yPos += 8; // Reduced from 10
         });
 
-        yPos += 5;
+        yPos += 3; // Reduced from 5
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 10;
+        yPos += 6; // Reduced from 10
 
         // Items
-        doc.fontSize(9).font('Helvetica-Bold');
+        doc.fontSize(8).font('Helvetica-Bold'); // Reduced from 9
         doc.text('Item', margin, yPos);
         doc.text('Amount', receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-        yPos += 12;
+        yPos += 9; // Reduced from 12
 
-        doc.font('Helvetica').fontSize(8);
+        doc.font('Helvetica').fontSize(7); // Reduced from 8
         sale.items?.forEach((item) => {
           const unitPrice = parseFloat(item.discountedPrice || item.unitPrice || 0);
           const quantity = parseInt(item.quantity || 1);
           const itemTotal = (unitPrice * quantity).toFixed(2);
           const itemName = item.name || item.productName || 'Item';
           
-          // Handle long item names
+          // Handle long item names - reduce spacing
           const lines = doc.heightOfString(itemName, { width: contentWidth - 70 });
           doc.text(itemName, margin, yPos, { width: contentWidth - 70 });
           doc.text(`Rs.${itemTotal}`, receiptWidth - margin - 60, yPos, { width: 60, align: 'right' });
-          yPos += Math.max(lines, 12);
+          yPos += Math.max(lines, 8); // Reduced from 12
         });
 
         yPos += 5;
@@ -189,9 +190,9 @@ class ReceiptGenerator {
         yPos += 12;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
-        yPos += 5;
+        yPos += 3; // Reduced from 5
 
-        doc.fontSize(12).font('Helvetica-Bold');
+        doc.fontSize(10).font('Helvetica-Bold'); // Reduced from 12
         const totalLabel = 'Total:';
         const totalAmount = `Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`;
         // Calculate positions to ensure single line - use more aggressive spacing
@@ -199,14 +200,14 @@ class ReceiptGenerator {
         const totalValueX = margin + totalLabelWidth + 3; // Very close to label
         const totalValueWidth = receiptWidth - totalValueX - margin;
         doc.text(totalLabel, margin, yPos, { width: totalLabelWidth });
-        doc.fontSize(11).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Slightly smaller font for amount
-        yPos += 15;
+        doc.fontSize(9).text(totalAmount, totalValueX, yPos, { width: totalValueWidth }); // Reduced from 11
+        yPos += 10; // Reduced from 15
 
         // Payment Mode
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
-        yPos += 10;
+        yPos += 6; // Reduced from 10
 
-        doc.fontSize(9).font('Helvetica-Bold');
+        doc.fontSize(8).font('Helvetica-Bold'); // Reduced from 9
         let paymentText = `Payment Mode: ${sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash')}`;
         doc.text(paymentText, margin, yPos);
 
@@ -221,30 +222,30 @@ class ReceiptGenerator {
         }
 
         if (sale.paymentMode === 'Split' && paymentDetails) {
-          yPos += 12;
-          doc.font('Helvetica').fontSize(8);
+          yPos += 8; // Reduced from 12
+          doc.font('Helvetica').fontSize(7); // Reduced from 8
           if (paymentDetails.cash > 0) {
             doc.text(`Cash: Rs.${parseFloat(paymentDetails.cash).toFixed(2)}`, margin + 10, yPos);
-            yPos += 10;
+            yPos += 7; // Reduced from 10
           }
           if (paymentDetails.card > 0) {
             doc.text(`Card: Rs.${parseFloat(paymentDetails.card).toFixed(2)}`, margin + 10, yPos);
-            yPos += 10;
+            yPos += 7; // Reduced from 10
           }
           if (paymentDetails.upi > 0) {
             doc.text(`UPI: Rs.${parseFloat(paymentDetails.upi).toFixed(2)}`, margin + 10, yPos);
-            yPos += 10;
+            yPos += 7; // Reduced from 10
           }
         }
 
-        yPos += 15;
+        yPos += 8; // Reduced from 15
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).dash(5, { space: 2 }).stroke().undash();
-        yPos += 15;
+        yPos += 8; // Reduced from 15
 
         // Footer
-        doc.fontSize(9).font('Helvetica');
+        doc.fontSize(8).font('Helvetica'); // Reduced from 9
         doc.text('Thank you for your business!', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        yPos += 7; // Reduced from 10
         doc.text('Visit us again soon', margin, yPos, { width: contentWidth, align: 'center' });
 
         doc.end();
