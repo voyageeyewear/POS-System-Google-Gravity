@@ -323,8 +323,7 @@ class ReceiptGenerator {
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 8;
 
-        // Footer
-        doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
+        // Footer - Single horizontal line
         yPos += 6;
         doc.fontSize(6).font('Helvetica');
         doc.text('Whether Tax is payable under reverse charge: No', margin, yPos);
