@@ -121,18 +121,19 @@ class ReceiptGenerator {
         doc.fontSize(7).font('Helvetica-Bold');
         const colWidths = {
           sl: 18,
-          product: 90,
-          hsn: 32,
+          product: 85,
+          hsn: 30,
           qty: 18,
-          price: 32,
-          total: 35
+          price: 38,
+          total: 40
         };
         
-        // Ensure total width fits within contentWidth
-        const totalColWidth = colWidths.sl + colWidths.product + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total;
+        // Ensure total width fits within contentWidth (with gaps between columns)
+        const gaps = 2 * 5; // 5 gaps of 2 points each
+        const totalColWidth = colWidths.sl + colWidths.product + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total + gaps;
         if (totalColWidth > contentWidth) {
           // Adjust product column to fit
-          colWidths.product = contentWidth - (colWidths.sl + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total);
+          colWidths.product = contentWidth - (colWidths.sl + colWidths.hsn + colWidths.qty + colWidths.price + colWidths.total + gaps);
         }
         
         let colX = margin;
@@ -204,12 +205,23 @@ class ReceiptGenerator {
           
           // Price - Use Rs. instead of ₹ for proper rendering, ensure 2 decimal places on same line
           const priceText = `Rs.${unitPrice.toFixed(2)}`;
-          doc.text(priceText, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right', lineBreak: false });
+          // Use ellipsis: false and lineBreak: false to prevent any wrapping
+          doc.text(priceText, colX, yPos + (rowHeight - 6) / 2, { 
+            width: colWidths.price, 
+            align: 'right', 
+            lineBreak: false,
+            ellipsis: false
+          });
           colX += colWidths.price + 2;
           
           // Total - ensure 2 decimal places on same line
           const totalText = `Rs.${itemTotal.toFixed(2)}`;
-          doc.text(totalText, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right', lineBreak: false });
+          doc.text(totalText, colX, yPos + (rowHeight - 6) / 2, { 
+            width: colWidths.total, 
+            align: 'right', 
+            lineBreak: false,
+            ellipsis: false
+          });
           
           yPos += rowHeight + 2; // Add spacing between rows
         });
@@ -226,19 +238,34 @@ class ReceiptGenerator {
         
         // Subtotal before Tax - ensure 2 decimal places on same line
         doc.text('Subtotal before Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
+        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { 
+          width: valueWidth, 
+          align: 'right', 
+          lineBreak: false,
+          ellipsis: false
+        });
         yPos += 7;
 
         // Discount (if applicable) - ensure 2 decimal places on same line
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.text('Discount', margin, yPos, { width: labelWidth });
-          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
+          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { 
+            width: valueWidth, 
+            align: 'right', 
+            lineBreak: false,
+            ellipsis: false
+          });
           yPos += 7;
         }
 
         // Total Tax - ensure 2 decimal places on same line
         doc.text('Total Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
+        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { 
+          width: valueWidth, 
+          align: 'right', 
+          lineBreak: false,
+          ellipsis: false
+        });
         yPos += 8;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
@@ -247,7 +274,12 @@ class ReceiptGenerator {
         // Total Invoice Amount - ensure 2 decimal places on same line
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text('Total Invoice Amount', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
+        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { 
+          width: valueWidth, 
+          align: 'right', 
+          lineBreak: false,
+          ellipsis: false
+        });
         doc.fontSize(7);
         yPos += 12;
 
