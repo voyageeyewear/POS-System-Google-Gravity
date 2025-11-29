@@ -60,24 +60,24 @@ class ReceiptGenerator {
         yPos += 5;
         doc.fontSize(12).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 10;
+        yPos += 12;
 
         // Store Details - Better spacing between lines
         doc.fontSize(7).font('Helvetica');
         if (store?.address) {
           if (store.address.street) {
             doc.text(store.address.street, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 7;
+            yPos += 8;
           }
           if (store.address.city && store.address.state) {
             doc.text(`${store.address.city}, ${store.address.state} ${store.address.zipCode || ''}`, margin, yPos, { width: contentWidth, align: 'center' });
-            yPos += 7;
+            yPos += 8;
           }
         }
         doc.text('voyagekiosk@voyageeyewear.in', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 7;
+        yPos += 8;
         doc.text('+91 97167 85038', margin, yPos, { width: contentWidth, align: 'center' });
-        yPos += 7;
+        yPos += 8;
         const gstNumber = store?.gstNumber || '08AGFPK7804C1ZQ';
         doc.text(`GSTIN: ${gstNumber}`, margin, yPos, { width: contentWidth, align: 'center' });
         // Add more bottom padding for neat spacing
@@ -202,12 +202,14 @@ class ReceiptGenerator {
           doc.text(quantity.toString(), colX, yPos + (rowHeight - 6) / 2, { width: colWidths.qty, align: 'center' });
           colX += colWidths.qty + 2;
           
-          // Price - Use Rs. instead of ₹ for proper rendering
-          doc.text(`Rs.${unitPrice.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right' });
+          // Price - Use Rs. instead of ₹ for proper rendering, ensure 2 decimal places on same line
+          const priceText = `Rs.${unitPrice.toFixed(2)}`;
+          doc.text(priceText, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.price, align: 'right', lineBreak: false });
           colX += colWidths.price + 2;
           
-          // Total
-          doc.text(`Rs.${itemTotal.toFixed(2)}`, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right' });
+          // Total - ensure 2 decimal places on same line
+          const totalText = `Rs.${itemTotal.toFixed(2)}`;
+          doc.text(totalText, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.total, align: 'right', lineBreak: false });
           
           yPos += rowHeight + 2; // Add spacing between rows
         });
@@ -222,30 +224,30 @@ class ReceiptGenerator {
         const valueX = receiptWidth - margin - 55;
         const valueWidth = 55;
         
-        // Subtotal before Tax
+        // Subtotal before Tax - ensure 2 decimal places on same line
         doc.text('Subtotal before Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`Rs.${subtotalBeforeTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
         yPos += 7;
 
-        // Discount (if applicable)
+        // Discount (if applicable) - ensure 2 decimal places on same line
         if (parseFloat(sale.totalDiscount || 0) > 0) {
           doc.text('Discount', margin, yPos, { width: labelWidth });
-          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+          doc.text(`-Rs.${parseFloat(sale.totalDiscount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
           yPos += 7;
         }
 
-        // Total Tax
+        // Total Tax - ensure 2 decimal places on same line
         doc.text('Total Tax', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`Rs.${totalTax.toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
         yPos += 8;
 
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 6;
 
-        // Total Invoice Amount
+        // Total Invoice Amount - ensure 2 decimal places on same line
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text('Total Invoice Amount', margin, yPos, { width: labelWidth });
-        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
+        doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right', lineBreak: false });
         doc.fontSize(7);
         yPos += 12;
 
