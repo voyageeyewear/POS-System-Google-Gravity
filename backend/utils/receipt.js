@@ -49,21 +49,21 @@ class ReceiptGenerator {
         }
 
         // Tax Invoice Title
-        doc.fontSize(11).font('Helvetica-Bold');
+        doc.fontSize(13).font('Helvetica-Bold');
         doc.text('Tax Invoice', receiptWidth - margin - 70, yPos + 8, { width: 70, align: 'right' });
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         doc.text('(Original for Recipient)', receiptWidth - margin - 70, yPos + 18, { width: 70, align: 'right' });
         
         yPos += Math.max(logoHeight, 30) + 8;
 
         // Store Name - Add more top padding for neat spacing
         yPos += 12;
-        doc.fontSize(10).font('Helvetica-Bold');
+        doc.fontSize(12).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
         yPos += 10;
 
         // Store Details - Better spacing between lines
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         if (store?.address) {
           if (store.address.street) {
             doc.text(store.address.street, margin, yPos, { width: contentWidth, align: 'center' });
@@ -88,10 +88,10 @@ class ReceiptGenerator {
         yPos += 8;
 
         // Order Information
-        doc.fontSize(7).font('Helvetica-Bold');
+        doc.fontSize(8).font('Helvetica-Bold');
         doc.text('Order Information', margin, yPos);
         yPos += 7;
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         
         const saleDate = new Date(sale.saleDate || sale.createdAt);
         const day = String(saleDate.getDate()).padStart(2, '0');
@@ -118,7 +118,7 @@ class ReceiptGenerator {
         yPos += 8;
 
         // Items Table Header - Adjusted column widths to prevent overlap
-        doc.fontSize(6).font('Helvetica-Bold');
+        doc.fontSize(7).font('Helvetica-Bold');
         const colWidths = {
           sl: 18,
           product: 90,
@@ -153,7 +153,7 @@ class ReceiptGenerator {
         yPos += 5;
 
         // Items - Handle text wrapping properly
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         let subtotalBeforeTax = 0;
         let totalTax = 0;
         
@@ -217,7 +217,7 @@ class ReceiptGenerator {
         yPos += 8;
 
         // Summary Section - Fixed alignment to prevent overlap
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         const labelWidth = 130;
         const valueX = receiptWidth - margin - 55;
         const valueWidth = 55;
@@ -243,17 +243,17 @@ class ReceiptGenerator {
         yPos += 6;
 
         // Total Invoice Amount
-        doc.fontSize(8).font('Helvetica-Bold');
+        doc.fontSize(10).font('Helvetica-Bold');
         doc.text('Total Invoice Amount', margin, yPos, { width: labelWidth });
         doc.text(`Rs.${parseFloat(sale.totalAmount || 0).toFixed(2)}`, valueX, yPos, { width: valueWidth, align: 'right' });
-        doc.fontSize(6);
+        doc.fontSize(7);
         yPos += 12;
 
         // Payment Section
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 6;
         
-        doc.fontSize(6).font('Helvetica');
+        doc.fontSize(7).font('Helvetica');
         const paymentMode = sale.paymentMode || (sale.paymentMethod ? sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1) : 'Cash');
         doc.text(`Payment Mode: ${paymentMode}`, margin, yPos);
         yPos += 7;
@@ -290,7 +290,7 @@ class ReceiptGenerator {
         // Footer
         doc.moveTo(margin, yPos).lineTo(receiptWidth - margin, yPos).stroke();
         yPos += 6;
-        doc.fontSize(5).font('Helvetica');
+        doc.fontSize(6).font('Helvetica');
         doc.text('Whether Tax is payable under reverse charge: No', margin, yPos);
         yPos += 6;
         if (store?.address) {
