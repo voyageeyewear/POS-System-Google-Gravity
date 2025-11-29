@@ -195,8 +195,10 @@ class ReceiptGenerator {
           doc.text(productName, colX, yPos, { width: colWidths.product });
           colX += colWidths.product + 2;
           
-          // HSN
+          // HSN - Smaller font size
+          doc.fontSize(6);
           doc.text(hsnCode, colX, yPos + (rowHeight - 6) / 2, { width: colWidths.hsn, align: 'center' });
+          doc.fontSize(7); // Reset to original size
           colX += colWidths.hsn + 2;
           
           // Qty
