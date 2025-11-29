@@ -29,7 +29,7 @@ class ReceiptGenerator {
         
         doc.pipe(stream);
 
-        let yPos = 8;
+        let yPos = 5;
 
         // Header - Logo and Title
         const logoPath = path.resolve(__dirname, '../assets/voyage-logo.png');
@@ -50,14 +50,14 @@ class ReceiptGenerator {
 
         // Tax Invoice Title
         doc.fontSize(13).font('Helvetica-Bold');
-        doc.text('Tax Invoice', receiptWidth - margin - 70, yPos + 8, { width: 70, align: 'right' });
+        doc.text('Tax Invoice', receiptWidth - margin - 70, yPos + 5, { width: 70, align: 'right' });
         doc.fontSize(7).font('Helvetica');
-        doc.text('(Original for Recipient)', receiptWidth - margin - 70, yPos + 18, { width: 70, align: 'right' });
+        doc.text('(Original for Recipient)', receiptWidth - margin - 70, yPos + 15, { width: 70, align: 'right' });
         
-        yPos += Math.max(logoHeight, 30) + 8;
+        yPos += Math.max(logoHeight, 30) + 3;
 
-        // Store Name - Add more top padding for neat spacing
-        yPos += 12;
+        // Store Name - Reduced top padding
+        yPos += 5;
         doc.fontSize(12).font('Helvetica-Bold');
         doc.text(store?.name || 'Voyage Eyewear', margin, yPos, { width: contentWidth, align: 'center' });
         yPos += 10;
